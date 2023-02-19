@@ -1,0 +1,68 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.jump": {
+			"loop": true,
+			"animation_length": 2.04,
+			"bones": {
+				"head": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.44": {
+							"vector": [-25, 0, 0]
+						},
+						"2.04": {
+							"vector": ["Math.max(query.anim_time*0.0005,15)", 0, 0]
+						}
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [-176.77218, -28.51362, 55.96364],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [-161.22651, -22.08356, 20.58556]
+						}
+					}
+				},
+				"feet": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [92.5, 0, 0],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [17.5, 0, 0],
+							"easing": "linear"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [-176.77218, 28.51362, -55.96364],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [-161.22651, 22.08356, -20.58556]
+						}
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}
