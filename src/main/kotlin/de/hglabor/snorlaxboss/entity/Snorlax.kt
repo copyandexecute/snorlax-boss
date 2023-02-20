@@ -40,11 +40,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val RUN = RawAnimation.begin().thenLoop("animation.hglabor.run")
         private val JUMP = RawAnimation.begin().thenPlayAndHold("animation.hglabor.jump")
 
-        private val ANIMATION_STATE: TrackedData<String> = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.STRING)
+        private val ANIMATION_STATE: TrackedData<String> =
+            DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.STRING)
     }
 
     override fun tick() {
         super.tick()
+        if (currentTask?.isFinished() == true) {
+            currentTask = currentTask?.nextTask()
+        }
         currentTask?.tick()
     }
 
@@ -71,12 +75,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         fun tick()
         fun getAnimation(): RawAnimation
         fun getName(): String
+        fun isFinished(): Boolean
+        fun nextTask(): Task
     }
 
     inner class JumpToPositionTask : Task {
         init {
             modifyVelocity(0, 2.5, 0)
-
         }
 
         override fun tick() {
@@ -84,12 +89,18 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun getAnimation(): RawAnimation = JUMP
         override fun getName(): String = "Jump"
+        override fun isFinished(): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun nextTask(): Task {
+            TODO("Not yet implemented")
+        }
     }
 
     inner class RunToTargetTask : Task {
         override fun tick() {
             if (target == null) {
-                handleUnknownTarget()
             } else {
                 if (pos.distanceTo(target!!.pos) >= 8f) {
                     if (navigation.isIdle) {
@@ -101,15 +112,18 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun getAnimation(): RawAnimation = RUN
         override fun getName(): String = "Run"
+        override fun isFinished(): Boolean {
+            TODO("Not yet implemented")
+        }
 
-        private fun handleUnknownTarget() {
-
+        override fun nextTask(): Task {
+            TODO("Not yet implemented")
         }
     }
 
     private fun yo(): RawAnimation {
         println(this.getAnimationState())
-        return when(this.getAnimationState().lowercase()) {
+        return when (this.getAnimationState().lowercase()) {
             "jump" -> JUMP
             "run" -> RUN
             else -> RUN
