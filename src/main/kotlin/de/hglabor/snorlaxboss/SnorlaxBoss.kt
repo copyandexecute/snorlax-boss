@@ -3,6 +3,7 @@ package de.hglabor.snorlaxboss
 import com.mojang.brigadier.context.CommandContext
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.extension.toId
+import de.hglabor.snorlaxboss.particles.RadialWave
 import de.hglabor.snorlaxboss.render.SnorlaxRenderer
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry
@@ -16,6 +17,7 @@ import net.minecraft.registry.Registries
 import net.minecraft.registry.Registry
 import net.minecraft.server.command.ServerCommandSource
 import net.silkmc.silk.commands.command
+import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 
 
 class SnorlaxBoss : ModInitializer {
@@ -35,6 +37,14 @@ class SnorlaxBoss : ModInitializer {
 
         fun CommandContext<ServerCommandSource>.getAllSnorlax(): MutableList<out Snorlax> {
             return this.source.world.getEntitiesByType(SNORLAX) { true }
+        }
+
+        command("attack") {
+            literal("radial_wave") {
+                runs {
+                    RadialWave.radialWave(this.source.world, this.source.playerOrThrow.pos)
+                }
+            }
         }
 
         command("snorlax") {
