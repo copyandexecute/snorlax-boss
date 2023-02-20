@@ -9,11 +9,7 @@ group = property("maven_group")!!
 version = property("mod_version")!!
 
 repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
+    maven("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
 }
 
 dependencies {
@@ -23,6 +19,10 @@ dependencies {
 
     modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+
+    modImplementation("software.bernie.geckolib:geckolib-fabric-1.19.3:4.0.3")
+    modImplementation("net.silkmc:silk-commands:1.9.5")
+    modImplementation("net.silkmc:silk-core:1.9.5")
 }
 
 tasks {

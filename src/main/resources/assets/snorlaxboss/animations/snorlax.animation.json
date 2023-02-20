@@ -1,0 +1,121 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.jump": {
+			"loop": true,
+			"animation_length": 2.04,
+			"bones": {
+				"head": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.44": {
+							"vector": [-25, 0, 0]
+						},
+						"2.04": {
+							"vector": ["Math.max(query.anim_time*0.0005,15)", 0, 0]
+						}
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [-176.77218, -28.51362, 55.96364],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [-161.22651, -22.08356, 20.58556]
+						}
+					}
+				},
+				"feet": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [92.5, 0, 0],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [17.5, 0, 0],
+							"easing": "linear"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.4": {
+							"vector": [-176.77218, 28.51362, -55.96364],
+							"easing": "easeOutElastic"
+						},
+						"2.04": {
+							"vector": [-161.22651, 22.08356, -20.58556]
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.run": {
+			"loop": true,
+			"bones": {
+				"body": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 1200) * -1.5", 0, 0]
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 750 +25) * 125 ", 0, 0]
+					}
+				},
+				"right_foot": {
+					"position": {
+						"vector": [0, "math.sin(query.anim_time * 1500) * 0.6 ", 0]
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 750 +25) * -125 ", 0, 0]
+					}
+				},
+				"left_foot": {
+					"position": {
+						"vector": [0, "math.sin(query.anim_time * 1500) * -0.6 ", 0]
+					}
+				}
+			}
+		},
+		"animation.hglabor.sleep": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 1.96,
+			"bones": {
+				"body": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.64": {
+							"vector": [-90, 0, 0],
+							"easing": "easeOutElastic",
+							"easingArgs": [1]
+						}
+					}
+				}
+			},
+			"particle_effects": {
+				"0.0": {
+					"effect": "rainbow"
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}
