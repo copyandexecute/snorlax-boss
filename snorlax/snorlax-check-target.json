@@ -1,0 +1,21 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.check-target": {
+			"loop": true,
+			"bones": {
+				"body": {
+					"rotation": {
+						"vector": [0, "Math.cos(query.anim_time * 150 +25) * 15 ", 0]
+					}
+				},
+				"head": {
+					"rotation": {
+						"vector": [0, "Math.cos(query.anim_time * 150 +25) * 45  ", 0]
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}

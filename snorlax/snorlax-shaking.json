@@ -1,0 +1,48 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.shaking": {
+			"loop": true,
+			"animation_length": 2.08,
+			"bones": {
+				"body": {
+					"position": {
+						"0.48": {
+							"vector": [0, 0, 0]
+						},
+						"0.64": {
+							"vector": [0, "Math.cos(query.anim_time * 2500) * 0.2 -0.5", 0],
+							"easing": "easeInQuad"
+						}
+					}
+				},
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.52": {
+							"vector": [-92.5, 0, 0],
+							"easing": "easeInOutBack"
+						},
+						"0.64": {
+							"vector": ["Math.cos(query.anim_time * 2000) * -15 -90", 0, 0],
+							"easing": "easeInCubic"
+						}
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"vector": [0, 0, 27.5]
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"vector": [0, 0, -27.5]
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}

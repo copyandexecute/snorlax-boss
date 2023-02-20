@@ -1,0 +1,33 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.sleep-idle": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"body": {
+					"rotation": {
+						"vector": [-90, 0, 0],
+						"easing": "easeOutElastic",
+						"easingArgs": [1]
+					}
+				},
+				"torso": {
+					"scale": {
+						"0.0": {
+							"vector": [1, 1, 1]
+						},
+						"0.88": {
+							"vector": [1.05, 1.05, 1.05],
+							"easing": "linear"
+						},
+						"2.0": {
+							"vector": [1, 1, 1]
+						}
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}

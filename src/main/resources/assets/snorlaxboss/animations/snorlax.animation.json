@@ -1,6 +1,59 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
+		"animation.hglabor.run": {
+			"loop": true,
+			"bones": {
+				"body": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 1200) * -1.5", 0, 0]
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 750 +25) * 125 ", 0, 0]
+					}
+				},
+				"right_foot": {
+					"position": {
+						"vector": [0, "math.sin(query.anim_time * 1500) * 0.6 ", 0]
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"vector": ["Math.cos(query.anim_time * 750 +25) * -125 ", 0, 0]
+					}
+				},
+				"left_foot": {
+					"position": {
+						"vector": [0, "math.sin(query.anim_time * 1500) * -0.6 ", 0]
+					}
+				}
+			}
+		},
+		"animation.hglabor.sleep": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.64,
+			"bones": {
+				"body": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.64": {
+							"vector": [-90, 0, 0],
+							"easing": "easeOutElastic",
+							"easingArgs": [1]
+						}
+					}
+				}
+			},
+			"particle_effects": {
+				"0.0": {
+					"effect": "rainbow"
+				}
+			}
+		},
 		"animation.hglabor.jump": {
 			"loop": true,
 			"animation_length": 2.04,
@@ -63,56 +116,208 @@
 				}
 			}
 		},
-		"animation.hglabor.run": {
+		"animation.hglabor.check-target": {
 			"loop": true,
 			"bones": {
 				"body": {
 					"rotation": {
-						"vector": ["Math.cos(query.anim_time * 1200) * -1.5", 0, 0]
+						"vector": [0, "Math.cos(query.anim_time * 150 +25) * 15 ", 0]
 					}
 				},
-				"right_arm": {
+				"head": {
 					"rotation": {
-						"vector": ["Math.cos(query.anim_time * 750 +25) * 125 ", 0, 0]
-					}
-				},
-				"right_foot": {
-					"position": {
-						"vector": [0, "math.sin(query.anim_time * 1500) * 0.6 ", 0]
-					}
-				},
-				"left_arm": {
-					"rotation": {
-						"vector": ["Math.cos(query.anim_time * 750 +25) * -125 ", 0, 0]
-					}
-				},
-				"left_foot": {
-					"position": {
-						"vector": [0, "math.sin(query.anim_time * 1500) * -0.6 ", 0]
+						"vector": [0, "Math.cos(query.anim_time * 150 +25) * 45  ", 0]
 					}
 				}
 			}
 		},
-		"animation.hglabor.sleep": {
-			"loop": "hold_on_last_frame",
-			"animation_length": 1.96,
+		"animation.hglabor.belly-flop": {
+			"animation_length": 0.68,
 			"bones": {
 				"body": {
 					"rotation": {
 						"0.0": {
 							"vector": [0, 0, 0]
 						},
-						"0.64": {
-							"vector": [-90, 0, 0],
-							"easing": "easeOutElastic",
-							"easingArgs": [1]
+						"0.6": {
+							"vector": [92.5, 0, 0],
+							"easing": "easeInBack"
+						}
+					},
+					"position": {
+						"vector": [0, 0, 0]
+					}
+				},
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.32": {
+							"vector": [-212.5, 0, 0],
+							"easing": "easeInQuart"
+						},
+						"0.68": {
+							"vector": [-177.5, 0, 0],
+							"easing": "easeOutCubic"
 						}
 					}
 				}
-			},
-			"particle_effects": {
-				"0.0": {
-					"effect": "rainbow"
+			}
+		},
+		"animation.hglabor.punch": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.56,
+			"bones": {
+				"body": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.36": {
+							"vector": [0, 75, 0],
+							"easing": "easeOutQuint"
+						},
+						"0.56": {
+							"vector": [0, 0, 0],
+							"easing": "easeInBack"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.36": {
+							"vector": [-90, 0, 0],
+							"easing": "easeOutQuint"
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.shaking": {
+			"loop": true,
+			"animation_length": 2.08,
+			"bones": {
+				"body": {
+					"position": {
+						"0.48": {
+							"vector": [0, 0, 0]
+						},
+						"0.64": {
+							"vector": [0, "Math.cos(query.anim_time * 2500) * 0.2 -0.5", 0],
+							"easing": "easeInQuad"
+						}
+					}
+				},
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.52": {
+							"vector": [-92.5, 0, 0],
+							"easing": "easeInOutBack"
+						},
+						"0.64": {
+							"vector": ["Math.cos(query.anim_time * 2000) * -15 -90", 0, 0],
+							"easing": "easeInCubic"
+						}
+					}
+				},
+				"right_arm": {
+					"rotation": {
+						"vector": [0, 0, 27.5]
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"vector": [0, 0, -27.5]
+					}
+				}
+			}
+		},
+		"animation.hglabor.beam": {
+			"animation_length": 2.92,
+			"bones": {
+				"body": {
+					"rotation": {
+						"1.24": {
+							"vector": [0, "Math.cos(query.anim_time * 500) * 10 -0.5", 0]
+						},
+						"1.32": {
+							"vector": [0, 0, 0]
+						},
+						"1.52": {
+							"vector": [0, "Math.cos(query.anim_time * 4000) * 5 -0.5", 0]
+						}
+					}
+				},
+				"head": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.44": {
+							"vector": [-32.5, 0, 0],
+							"easing": "easeOutCirc"
+						},
+						"1.32": {
+							"vector": [-32.5, 0, 0],
+							"easing": "easeOutCirc"
+						},
+						"1.52": {
+							"vector": [-2.5, 0, 0],
+							"easing": "easeOutQuint"
+						}
+					}
+				},
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.44": {
+							"vector": [-142.5, 0, 0],
+							"easing": "easeOutQuad"
+						},
+						"1.32": {
+							"vector": [-142.5, 0, 0],
+							"easing": "easeOutQuad"
+						},
+						"1.52": {
+							"vector": [42.5, 0, 0]
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.sleep-idle": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"body": {
+					"rotation": {
+						"vector": [-90, 0, 0],
+						"easing": "easeOutElastic",
+						"easingArgs": [1]
+					}
+				},
+				"torso": {
+					"scale": {
+						"0.0": {
+							"vector": [1, 1, 1]
+						},
+						"0.88": {
+							"vector": [1.05, 1.05, 1.05],
+							"easing": "linear"
+						},
+						"2.0": {
+							"vector": [1, 1, 1]
+						}
+					}
 				}
 			}
 		}

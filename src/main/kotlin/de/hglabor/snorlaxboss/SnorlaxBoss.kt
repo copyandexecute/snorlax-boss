@@ -52,6 +52,13 @@ class SnorlaxBoss : ModInitializer {
                     }
                 }
             }
+            literal("sleep") {
+                runs {
+                    this.getAllSnorlax().forEach {
+                        it.currentTask = it.SleepingTask()
+                    }
+                }
+            }
         }
     }
 }
