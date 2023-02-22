@@ -1,6 +1,7 @@
 package de.hglabor.snorlaxboss.entity
 
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import net.minecraft.entity.EntityType
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.ai.pathing.EntityNavigation
@@ -11,13 +12,16 @@ import net.minecraft.entity.data.TrackedData
 import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket
 import net.minecraft.text.Text
+import net.minecraft.util.math.Box
 import net.minecraft.world.World
 import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
+import net.silkmc.silk.core.task.mcSyncLaunch
 import net.silkmc.silk.core.text.broadcastText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
@@ -123,6 +127,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return RunToTargetTask()
         }
     }
+
     inner class JumpToPositionTask : Task("Jump") {
         override fun onEnable() {
             modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
@@ -140,6 +145,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return if (Random.nextBoolean()) RunToTargetTask() else SleepingTask()
         }
     }
+
     inner class RunToTargetTask : Task("Run") {
         override fun onEnable() {
             jobs += infiniteMcCoroutineTask {
@@ -163,9 +169,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Task {
-            return listOf(ShakingTargetTask(),CheckTargetTask(),PunchTargetTask(),BeamTask(),BellyFlopTask(),JumpToPositionTask()).random()
+            return BellyFlopTask()
         }
     }
+
     inner class CheckTargetTask : Task("CheckTarget") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
@@ -179,6 +186,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return RunToTargetTask()
         }
     }
+
     inner class ShakingTargetTask : Task("Shaking") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
@@ -192,6 +200,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return RunToTargetTask()
         }
     }
+
     inner class PunchTargetTask : Task("Punch") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
@@ -205,6 +214,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return RunToTargetTask()
         }
     }
+
     inner class BeamTask : Task("Beam") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
@@ -218,16 +228,33 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return RunToTargetTask()
         }
     }
+
     inner class BellyFlopTask : Task("BellyFlop") {
         override fun onEnable() {
-            modifyVelocity(0, Random.nextDouble(0.5, 1.5), 0)
+            val from = pos
+            val to = target!!.pos //TODO nullcheck
+            val direction = to.subtract(from)
+            modifyVelocity(direction.normalize().multiply(1.2,0.0,1.2))
+            modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
-                isFinished = isOnGround
+                val isGrounded = isOnGround
+
+                if (isGrounded) {
+                    mcCoroutineTask(delay = 1.seconds) { isFinished = isOnGround }
+                    world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
+                        .forEach { player ->
+                            (player as ModifiedPlayer).setFlat(true)
+                            mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
+                                (player as ModifiedPlayer).setFlat(false)
+                            }
+                        }
+                    this.cancel()
+                }
             }
         }
 
         override fun nextTask(): Task {
-            return if (Random.nextBoolean()) RunToTargetTask() else SleepingTask()
+            return RunToTargetTask()
         }
     }
 
