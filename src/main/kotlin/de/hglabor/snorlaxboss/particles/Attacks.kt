@@ -5,6 +5,7 @@ import net.minecraft.block.AbstractFireBlock
 import net.minecraft.block.Block
 import net.minecraft.entity.Entity
 import net.minecraft.entity.FallingBlockEntity
+import net.minecraft.entity.LivingEntity
 import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.particle.ParticleTypes
@@ -24,10 +25,10 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 
-object RadialWave {
-    fun radialWave(player: ServerPlayerEntity, radius: Int) {
-        val vec3i = Vec3i(player.blockX, player.blockY - 1, player.blockZ)
-        val world = player.world
+object Attacks {
+    fun radialWave(entity: LivingEntity, radius: Int) {
+        val vec3i = Vec3i(entity.blockX, entity.blockY - 1, entity.blockZ)
+        val world = entity.world
         val hitRadius = 4.0
 
         repeat(radius) { counter ->
@@ -53,12 +54,17 @@ object RadialWave {
         }
     }
 
-    fun beam2(player: ServerPlayerEntity, particle: ParticleEffect = ParticleTypes.SONIC_BOOM, withFire: Boolean = true) {
-        var eyePos = player.eyePos
-        val dir = player.directionVector.normalize().multiply(1.0)
-        val world = player.world as ServerWorld
+    fun hyperBeam(
+        livingEntity: LivingEntity,
+        length: Long = 100,
+        particle: ParticleEffect = ParticleTypes.SONIC_BOOM,
+        withFire: Boolean = true
+    ) {
+        var eyePos = livingEntity.eyePos
+        val dir = livingEntity.directionVector.normalize().multiply(1.0)
+        val world = livingEntity.world as ServerWorld
 
-        mcCoroutineTask(howOften = 100, period = 1.ticks) {
+        mcCoroutineTask(howOften = length, period = 1.ticks) {
             world.spawnParticles(
                 particle,
                 eyePos.x,
@@ -72,7 +78,7 @@ object RadialWave {
             )
 
             Vec3i(eyePos.x, eyePos.y, eyePos.z).filledSpherePositionSet(3).forEach {
-                world.breakBlock(it, true, player)
+                world.breakBlock(it, true, livingEntity)
             }
 
             if (withFire) {
@@ -97,11 +103,11 @@ object RadialWave {
         }
     }
 
-    fun spawnSleepingParticles(player: ServerPlayerEntity) {
-        val world = player.world as ServerWorld
-        mcCoroutineTask(howOften = 5, period = 1.seconds) {
+    fun sleeping(livingEntity: LivingEntity, durationInSeconds: Long) {
+        val world = livingEntity.world as ServerWorld
+        mcCoroutineTask(howOften = durationInSeconds, period = 1.seconds) {
             var yOffset = 0.1
-            player.eyePos.add(0.0, 0.5, 0.0).apply {
+            livingEntity.eyePos.add(0.0, 0.5, 0.0).apply {
                 repeat(3) { count ->
                     mcCoroutineTask(delay = count.ticks * 2) {
                         yOffset += 0.6

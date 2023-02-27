@@ -1,7 +1,14 @@
 package de.hglabor.snorlaxboss.entity
 
+import de.hglabor.snorlaxboss.extension.Network
+import de.hglabor.snorlaxboss.extension.hold
+import de.hglabor.snorlaxboss.extension.loop
+import de.hglabor.snorlaxboss.extension.play
+import de.hglabor.snorlaxboss.particles.Attacks
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import net.minecraft.entity.EntityDimensions
+import net.minecraft.entity.EntityPose
 import net.minecraft.entity.EntityType
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.ai.pathing.EntityNavigation
@@ -13,7 +20,6 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket
 import net.minecraft.text.Text
 import net.minecraft.util.math.Box
 import net.minecraft.world.World
@@ -21,7 +27,6 @@ import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
-import net.silkmc.silk.core.task.mcSyncLaunch
 import net.silkmc.silk.core.text.broadcastText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
@@ -31,17 +36,34 @@ import software.bernie.geckolib.core.animation.AnimationController
 import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
     GeoEntity {
     private val factory = GeckoLibUtil.createInstanceCache(this)
-    var currentTask: Task? = RunToTargetTask()
-        set(value) {
-            this.dataTracker.set(ANIMATION_STATE, value?.name ?: "Idle")
-            field = value
-        }
+
+    enum class Attack(
+        val animation: RawAnimation,
+        val supplier: (Snorlax) -> Task
+    ) {
+        SHAKING("shaking".play(), Snorlax::ShakingTargetTask),
+        IDLE("idle".play(), Snorlax::IdleTargetTask),
+        BEAM("beam".play(), Snorlax::BeamTask),
+        CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
+        PUNCH("punch".play(), Snorlax::PunchTargetTask),
+        RUN("run".loop(), Snorlax::RunToTargetTask),
+        BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
+        SLEEP(
+            RawAnimation.begin()
+                .then("animation.hglabor.sleep", Animation.LoopType.PLAY_ONCE)
+                .thenLoop("animation.hglabor.sleep-idle"), Snorlax::SleepingTask
+        ),
+        JUMP("jump".hold(), Snorlax::JumpToPositionTask);
+    }
 
     companion object {
         fun createAttributes(): DefaultAttributeContainer.Builder {
@@ -51,41 +73,38 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0).add(EntityAttributes.GENERIC_ARMOR, 2.0)
         }
 
-        private val RUN = RawAnimation.begin().thenLoop("animation.hglabor.run")
-        private val JUMP = RawAnimation.begin().thenPlayAndHold("animation.hglabor.jump")
-        private val CHECK_TARGET = RawAnimation.begin().thenLoop("animation.hglabor.check-target")
-        private val SHAKING = RawAnimation.begin().thenPlay("animation.hglabor.shaking")
-        private val PUNCH = RawAnimation.begin().thenPlay("animation.hglabor.punch")
-        private val BELLY_FLOP = RawAnimation.begin().thenPlayAndHold("animation.hglabor.belly-flop")
-        private val BEAM = RawAnimation.begin().thenPlay("animation.hglabor.beam")
-        private val SLEEP = RawAnimation.begin()
-            .then("animation.hglabor.sleep", Animation.LoopType.PLAY_ONCE)
-            .thenLoop("animation.hglabor.sleep-idle")
+        val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(2f, 2f)
+        private val POSE_DIMENSIONS: Map<EntityPose, EntityDimensions> = mutableMapOf(
+            EntityPose.SLEEPING to EntityDimensions.changing(3f, 1f)
+        )
 
-        private val ANIMATION_STATE: TrackedData<String> =
-            DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.STRING)
-    }
-
-    init {
-        currentTask?.onEnable()
+        private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, Network.ATTACK)
     }
 
     override fun tick() {
         super.tick()
-        if (currentTask?.isFinished == true) {
-            currentTask?.onDisable()
-            currentTask = currentTask?.nextTask()
-            currentTask?.onEnable()
-        }
+        /*if (task?.isFinished == true) {
+            task?.onDisable()
+            //currentTask = currentTask?.nextTask()
+            //currentTask?.onEnable()
+        }*/
     }
+
+    var task: Task? = null
+    var attack: Attack
+        get() = this.dataTracker.get(ATTACK)
+        set(value) {
+            this.dataTracker.set(ATTACK, value)
+            task?.onDisable()
+            world.server?.broadcastText("Disabling ${task?.name}")
+            task = value.supplier.invoke(this)
+            task?.onEnable()
+            world.server?.broadcastText("Enabling ${task?.name}")
+        }
 
     override fun initDataTracker() {
         super.initDataTracker()
-        dataTracker.startTracking(ANIMATION_STATE, "Idle")
-    }
-
-    fun getAnimationState(): String {
-        return this.dataTracker.get(ANIMATION_STATE)
+        dataTracker.startTracking(ATTACK, Attack.IDLE)
     }
 
     override fun getTarget(): LivingEntity? {
@@ -111,16 +130,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class SleepingTask : Task("Sleep") {
         override fun onEnable() {
-            val nextInt = Random.nextInt(5, 10)
-            server?.broadcastText("Sleeping for ${nextInt} seconds")
-            mcCoroutineTask(delay = nextInt.seconds) {
+            val sleepSeconds = Random.nextLong(5, 10)
+            Attacks.sleeping(this@Snorlax, sleepSeconds)
+            mcCoroutineTask(delay = sleepSeconds.seconds) {
                 isFinished = true
             }
-        }
-
-        override fun onDisable() {
-            super.onDisable()
-            server?.broadcastText("Stopped Sleeping")
         }
 
         override fun nextTask(): Task {
@@ -132,13 +146,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onEnable() {
             modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
-                isFinished = isOnGround
+                val isGrounded = isOnGround
+                if (isGrounded) {
+                    mcCoroutineTask(delay = 2.seconds) { isFinished = isOnGround }
+                    Attacks.radialWave(this@Snorlax, Random.nextInt(8, 30))
+                    this.cancel()
+                }
             }
-        }
-
-        override fun onDisable() {
-            super.onDisable()
-            server?.broadcastText(Text.of("Stopping Jump Task"))
         }
 
         override fun nextTask(): Task {
@@ -187,6 +201,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    inner class IdleTargetTask : Task("Idle") {
+        override fun onEnable() {
+        }
+
+        override fun nextTask(): Task {
+            return IdleTargetTask()
+        }
+    }
+
     inner class ShakingTargetTask : Task("Shaking") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
@@ -217,9 +240,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class BeamTask : Task("Beam") {
         override fun onEnable() {
-            val nextInt = Random.nextInt(5, 10)
-            server?.broadcastText("Beam for ${nextInt} seconds")
-            mcCoroutineTask(delay = nextInt.seconds) {
+            lookAtEntity(target, 90f, 90f)
+            Attacks.hyperBeam(this@Snorlax, Random.nextLong(50, 150))
+            mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
                 isFinished = true
             }
         }
@@ -234,7 +257,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             val from = pos
             val to = target!!.pos //TODO nullcheck
             val direction = to.subtract(from)
-            modifyVelocity(direction.normalize().multiply(1.2,0.0,1.2))
+            modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
             modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
@@ -258,24 +281,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
-    private fun yo(): RawAnimation {
-        return when (this.getAnimationState().lowercase()) {
-            "jump" -> JUMP
-            "run" -> RUN
-            "sleep" -> SLEEP
-            "checktarget" -> CHECK_TARGET
-            "bellyflop" -> BELLY_FLOP
-            "beam" -> BEAM
-            "shaking" -> SHAKING
-            "punch" -> PUNCH
-            else -> CHECK_TARGET
-        }
+    //TODO Sleeping hitbox
+    override fun getDimensions(pose: EntityPose): EntityDimensions {
+        return POSE_DIMENSIONS.getOrDefault(pose, STANDING_DIMENSIONS)
     }
 
     override fun registerControllers(controller: AnimatableManager.ControllerRegistrar) {
         controller.add(
             AnimationController(this, "controller", 0) {
-                it.controller.setAnimation(yo())
+                it.controller.setAnimation(attack.animation)
                 return@AnimationController PlayState.CONTINUE
             }
         )
