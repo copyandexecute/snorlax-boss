@@ -115,20 +115,34 @@ object Attacks {
                 StatusEffects.RESISTANCE, (durationInSeconds * 20).toInt(), 4, false, false
             )
         )
-        mcCoroutineTask(howOften = durationInSeconds, period = 1.seconds) {
+
+
+        mcCoroutineTask(howOften = durationInSeconds, delay = 5.ticks, period = 1.seconds) {
             var yOffset = 0.1
-            livingEntity.eyePos.add(0.0, 0.5, 0.0).apply {
-                repeat(3) { count ->
-                    mcCoroutineTask(delay = count.ticks * 2) {
-                        yOffset += 0.6
-                        val particle = when (count) {
-                            0 -> ParticleManager.SLEEP
-                            1 -> ParticleManager.SLEEP_MIDDLE
-                            2 -> ParticleManager.SLEEP_BIG
-                            else -> ParticleManager.SLEEP
-                        }
-                        world.spawnParticles(particle, x + yOffset, y + yOffset, z, 0, 0.0, 0.0, 0.0, 0.0)
+
+            val direction = livingEntity.directionVector
+            val particlePos = livingEntity.eyePos.add(0.0, 0.5, 0.0).subtract(direction.multiply(4.5))
+
+            repeat(3) { count ->
+                mcCoroutineTask(delay = count.ticks * 2) {
+                    yOffset += 0.6
+                    val particle = when (count) {
+                        0 -> ParticleManager.SLEEP
+                        1 -> ParticleManager.SLEEP_MIDDLE
+                        2 -> ParticleManager.SLEEP_BIG
+                        else -> ParticleManager.SLEEP
                     }
+                    world.spawnParticles(
+                        particle,
+                        particlePos.x + yOffset,
+                        particlePos.y + yOffset,
+                        particlePos.z,
+                        0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
                 }
             }
         }

@@ -4,10 +4,7 @@ import de.hglabor.snorlaxboss.extension.*
 import de.hglabor.snorlaxboss.particles.Attacks
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import net.minecraft.entity.EntityDimensions
-import net.minecraft.entity.EntityPose
-import net.minecraft.entity.EntityType
-import net.minecraft.entity.LivingEntity
+import net.minecraft.entity.*
 import net.minecraft.entity.ai.pathing.EntityNavigation
 import net.minecraft.entity.attribute.DefaultAttributeContainer
 import net.minecraft.entity.attribute.EntityAttributes
@@ -18,6 +15,8 @@ import net.minecraft.entity.data.TrackedData
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.item.ItemStack
+import net.minecraft.item.Items
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.util.math.Box
 import net.minecraft.world.World
@@ -43,28 +42,33 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     private val bossBar = ServerBossBar(literalText("Snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
 
     enum class Attack(
-        val animation: RawAnimation,
-        val supplier: (Snorlax) -> Task
+        val animation: RawAnimation, val supplier: (Snorlax) -> Task
     ) {
-        SHAKING("shaking".play(), Snorlax::ShakingTargetTask),
-        IDLE("check-target".play(), Snorlax::IdleTargetTask),
-        BEAM("beam".play(), Snorlax::BeamTask),
-        CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
-        PUNCH("punch".play(), Snorlax::PunchTargetTask),
-        RUN("run".loop(), Snorlax::RunToTargetTask),
-        BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
-        SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepingTask),
+        SHAKING("shaking".play(), Snorlax::ShakingTargetTask), IDLE(
+            "check-target".play(),
+            Snorlax::IdleTargetTask
+        ),
+        BEAM("beam".play(), Snorlax::BeamTask), CHECK_TARGET(
+            "check-target".loop(),
+            Snorlax::CheckTargetTask
+        ),
+        PUNCH("punch".play(), Snorlax::PunchTargetTask), RUN(
+            "run".loop(),
+            Snorlax::RunToTargetTask
+        ),
+        BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask), SLEEP(
+            "sleep".once().loop("sleep-idle"),
+            Snorlax::SleepingTask
+        ),
         JUMP("jump".hold(), Snorlax::JumpToPositionTask);
     }
 
     companion object {
         fun createAttributes(): DefaultAttributeContainer.Builder {
-            return MobEntity.createLivingAttributes()
-                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 35.0)
+            return MobEntity.createLivingAttributes().add(EntityAttributes.GENERIC_FOLLOW_RANGE, 35.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.23000000417232513)
-                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0)
-                .add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
-                .add(EntityAttributes.GENERIC_ARMOR, 4.0)
+                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0).add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
+                .add(EntityAttributes.GENERIC_ARMOR, 4.0).add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
         }
 
         val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(2f, 2f)
@@ -208,10 +212,23 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class PunchTargetTask : Task("Punch") {
         override fun onEnable() {
-            val nextInt = Random.nextInt(5, 10)
-            server?.broadcastText("Punch Target for ${nextInt} seconds")
-            mcCoroutineTask(delay = nextInt.seconds) {
+            val radius = 15.0
+            mcCoroutineTask(delay = 5.ticks) {
+                world.getOtherEntities(this@Snorlax, Box.of(pos, radius, radius, radius)).filter(::canSee)
+                    .filterIsInstance<LivingEntity>().forEach(::attack)
+            }
+            mcCoroutineTask(delay = 20.ticks) {
                 isFinished = true
+            }
+        }
+
+        private fun attack(entity: LivingEntity) {
+            this@Snorlax.tryAttack(entity)
+            val player = entity as? PlayerEntity ?: return
+            val item = if (player.isUsingItem) player.activeItem else ItemStack.EMPTY
+            if (item.isOf(Items.SHIELD)) {
+                player.itemCooldownManager.set(Items.SHIELD, 100)
+                world.sendEntityStatus(player, EntityStatuses.BREAK_SHIELD)
             }
         }
     }
@@ -257,12 +274,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     override fun registerControllers(controller: AnimatableManager.ControllerRegistrar) {
-        controller.add(
-            AnimationController(this, "controller", 0) {
-                it.controller.setAnimation(attack.animation)
-                return@AnimationController PlayState.CONTINUE
-            }
-        )
+        controller.add(AnimationController(this, "controller", 0) {
+            it.controller.setAnimation(attack.animation)
+            return@AnimationController PlayState.CONTINUE
+        })
     }
 
     override fun getAnimatableInstanceCache(): AnimatableInstanceCache = factory
