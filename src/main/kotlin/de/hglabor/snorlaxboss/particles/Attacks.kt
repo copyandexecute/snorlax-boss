@@ -6,6 +6,8 @@ import net.minecraft.block.Block
 import net.minecraft.entity.Entity
 import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
+import net.minecraft.entity.effect.StatusEffectInstance
+import net.minecraft.entity.effect.StatusEffects
 import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.particle.ParticleTypes
@@ -89,9 +91,7 @@ object Attacks {
                             val blockState2 = AbstractFireBlock.getState(world, offset)
                             if (Random.nextBoolean()) {
                                 world.setBlockState(
-                                    offset,
-                                    blockState2,
-                                    Block.NOTIFY_ALL or Block.REDRAW_ON_MAIN_THREAD
+                                    offset, blockState2, Block.NOTIFY_ALL or Block.REDRAW_ON_MAIN_THREAD
                                 )
                             }
                         }
@@ -105,6 +105,16 @@ object Attacks {
 
     fun sleeping(livingEntity: LivingEntity, durationInSeconds: Long) {
         val world = livingEntity.world as ServerWorld
+        livingEntity.addStatusEffect(
+            StatusEffectInstance(
+                StatusEffects.REGENERATION, (durationInSeconds * 20).toInt(), 7, false, false
+            )
+        )
+        livingEntity.addStatusEffect(
+            StatusEffectInstance(
+                StatusEffects.RESISTANCE, (durationInSeconds * 20).toInt(), 4, false, false
+            )
+        )
         mcCoroutineTask(howOften = durationInSeconds, period = 1.seconds) {
             var yOffset = 0.1
             livingEntity.eyePos.add(0.0, 0.5, 0.0).apply {
@@ -152,15 +162,7 @@ object Attacks {
                 vec = vec.rotateY(yaw)
                 val pos = eyePos.add(vec)
                 world.spawnParticles(
-                    DustParticleEffect.DEFAULT,
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0
+                    DustParticleEffect.DEFAULT, pos.x, pos.y, pos.z, 0, 0.0, 0.0, 0.0, 0.0
                 ) // Reminder to self - the "data" option for a (particle, location, data) is speed, not count!!
             }
             eyePos = eyePos.add(dir)

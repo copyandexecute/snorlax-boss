@@ -47,7 +47,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         val supplier: (Snorlax) -> Task
     ) {
         SHAKING("shaking".play(), Snorlax::ShakingTargetTask),
-        IDLE("idle".play(), Snorlax::IdleTargetTask),
+        IDLE("check-target".play(), Snorlax::IdleTargetTask),
         BEAM("beam".play(), Snorlax::BeamTask),
         CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
         PUNCH("punch".play(), Snorlax::PunchTargetTask),
