@@ -7,6 +7,9 @@
     "entity.player.PlayerEntityMixin"
   ],
   "client": [
+    "option.KeyBindingMixin",
+    "render.CameraMixin",
+    "render.GameRendererMixin",
     "render.entity.PlayerEntityRendererMixin"
   ],
   "injectors": {
