@@ -1,9 +1,6 @@
 package de.hglabor.snorlaxboss.entity
 
-import de.hglabor.snorlaxboss.extension.Network
-import de.hglabor.snorlaxboss.extension.hold
-import de.hglabor.snorlaxboss.extension.loop
-import de.hglabor.snorlaxboss.extension.play
+import de.hglabor.snorlaxboss.extension.*
 import de.hglabor.snorlaxboss.particles.Attacks
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -14,13 +11,14 @@ import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.ai.pathing.EntityNavigation
 import net.minecraft.entity.attribute.DefaultAttributeContainer
 import net.minecraft.entity.attribute.EntityAttributes
+import net.minecraft.entity.boss.BossBar
+import net.minecraft.entity.boss.ServerBossBar
 import net.minecraft.entity.data.DataTracker
 import net.minecraft.entity.data.TrackedData
-import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.text.Text
+import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.util.math.Box
 import net.minecraft.world.World
 import net.silkmc.silk.core.entity.modifyVelocity
@@ -28,23 +26,21 @@ import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
 import net.silkmc.silk.core.text.broadcastText
+import net.silkmc.silk.core.text.literalText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager
-import software.bernie.geckolib.core.animation.Animation
 import software.bernie.geckolib.core.animation.AnimationController
 import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
-import java.util.function.Consumer
-import java.util.function.Function
-import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
     GeoEntity {
     private val factory = GeckoLibUtil.createInstanceCache(this)
+    private val bossBar = ServerBossBar(literalText("Snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
 
     enum class Attack(
         val animation: RawAnimation,
@@ -57,11 +53,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         PUNCH("punch".play(), Snorlax::PunchTargetTask),
         RUN("run".loop(), Snorlax::RunToTargetTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
-        SLEEP(
-            RawAnimation.begin()
-                .then("animation.hglabor.sleep", Animation.LoopType.PLAY_ONCE)
-                .thenLoop("animation.hglabor.sleep-idle"), Snorlax::SleepingTask
-        ),
+        SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepingTask),
         JUMP("jump".hold(), Snorlax::JumpToPositionTask);
     }
 
@@ -70,24 +62,32 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return MobEntity.createLivingAttributes()
                 .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 35.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.23000000417232513)
-                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0).add(EntityAttributes.GENERIC_ARMOR, 2.0)
+                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0)
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
+                .add(EntityAttributes.GENERIC_ARMOR, 4.0)
         }
 
         val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(2f, 2f)
-        private val POSE_DIMENSIONS: Map<EntityPose, EntityDimensions> = mutableMapOf(
-            EntityPose.SLEEPING to EntityDimensions.changing(3f, 1f)
+        private val POSE_DIMENSIONS: Map<Attack, EntityDimensions> = mutableMapOf(
+            Attack.SLEEP to EntityDimensions.changing(3f, 1f)
         )
 
         private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, Network.ATTACK)
     }
 
+
     override fun tick() {
         super.tick()
-        /*if (task?.isFinished == true) {
-            task?.onDisable()
-            //currentTask = currentTask?.nextTask()
-            //currentTask?.onEnable()
-        }*/
+        if (!isAiDisabled) {
+            if (task?.isFinished == true) {
+                attack = task!!.nextTask()
+            }
+        }
+    }
+
+    override fun mobTick() {
+        super.mobTick()
+        bossBar.percent = this.health / this.maxHealth
     }
 
     var task: Task? = null
@@ -115,17 +115,24 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return super.computeFallDamage(fallDistance, damageMultiplier) - 100
     }
 
+    override fun onStartedTrackingBy(player: ServerPlayerEntity) {
+        super.onStartedTrackingBy(player)
+        bossBar.addPlayer(player)
+    }
+
+    override fun onStoppedTrackingBy(player: ServerPlayerEntity) {
+        super.onStoppedTrackingBy(player)
+        bossBar.removePlayer(player)
+    }
+
     override fun createNavigation(world: World): EntityNavigation = SnorlaxNavigation(this, world)
 
     sealed class Task(val name: String) {
         var jobs = mutableListOf<Job>()
         var isFinished = false
         abstract fun onEnable()
-        open fun onDisable() {
-            jobs.forEach(Job::cancel)
-        }
-
-        abstract fun nextTask(): Task
+        open fun onDisable() = jobs.forEach(Job::cancel)
+        open fun nextTask(): Attack = Attack.IDLE
     }
 
     inner class SleepingTask : Task("Sleep") {
@@ -135,10 +142,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             mcCoroutineTask(delay = sleepSeconds.seconds) {
                 isFinished = true
             }
-        }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
         }
     }
 
@@ -153,10 +156,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     this.cancel()
                 }
             }
-        }
-
-        override fun nextTask(): Task {
-            return if (Random.nextBoolean()) RunToTargetTask() else SleepingTask()
         }
     }
 
@@ -179,11 +178,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onDisable() {
             super.onDisable()
             navigation.stop()
-            server?.broadcastText(Text.of("Stopping Run Task"))
-        }
-
-        override fun nextTask(): Task {
-            return BellyFlopTask()
         }
     }
 
@@ -195,18 +189,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isFinished = true
             }
         }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
-        }
     }
 
     inner class IdleTargetTask : Task("Idle") {
         override fun onEnable() {
-        }
-
-        override fun nextTask(): Task {
-            return IdleTargetTask()
         }
     }
 
@@ -218,10 +204,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isFinished = true
             }
         }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
-        }
     }
 
     inner class PunchTargetTask : Task("Punch") {
@@ -232,10 +214,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isFinished = true
             }
         }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
-        }
     }
 
     inner class BeamTask : Task("Beam") {
@@ -245,10 +223,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
                 isFinished = true
             }
-        }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
         }
     }
 
@@ -275,15 +249,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
             }
         }
-
-        override fun nextTask(): Task {
-            return RunToTargetTask()
-        }
     }
 
     //TODO Sleeping hitbox
     override fun getDimensions(pose: EntityPose): EntityDimensions {
-        return POSE_DIMENSIONS.getOrDefault(pose, STANDING_DIMENSIONS)
+        return POSE_DIMENSIONS.getOrDefault(attack, STANDING_DIMENSIONS)
     }
 
     override fun registerControllers(controller: AnimatableManager.ControllerRegistrar) {
