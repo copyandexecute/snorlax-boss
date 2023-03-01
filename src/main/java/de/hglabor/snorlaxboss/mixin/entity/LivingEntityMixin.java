@@ -1,10 +1,14 @@
 package de.hglabor.snorlaxboss.mixin.entity;
 
+import de.hglabor.snorlaxboss.entity.IPauseEntityMovement;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,67 +17,37 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin extends Entity {
-    @Shadow
-    protected int bodyTrackingIncrements;
-
-    @Shadow
-    protected double serverX;
-
-    @Shadow
-    protected double serverY;
-
-    @Shadow
-    protected double serverZ;
-
-    @Shadow
-    protected double serverYaw;
-
-    @Shadow
-    protected double serverPitch;
-
-    @Shadow
-    public abstract boolean canMoveVoluntarily();
-
-    @Shadow
-    protected int headTrackingIncrements;
-
-    @Shadow
-    public float headYaw;
-
-    @Shadow
-    protected double serverHeadYaw;
+public abstract class LivingEntityMixin extends Entity implements IPauseEntityMovement {
+    private static final TrackedData<Boolean> IS_PAUSED = DataTracker.registerData(LivingEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 
     public LivingEntityMixin(EntityType<?> type, World world) {
         super(type, world);
     }
 
-    @Inject(method = "tickMovement", at = @At("HEAD"), cancellable = true)
-    private void tickMovementInjection(CallbackInfo ci) {
-        if (ModifiedPlayerManager.INSTANCE.isActive() && getType() == EntityType.PLAYER) {
-            if (this.isLogicalSideForUpdatingMovement()) {
-                this.bodyTrackingIncrements = 0;
-                this.updateTrackedPosition(this.getX(), this.getY(), this.getZ());
-            }
+    @Inject(method = "initDataTracker", at = @At("TAIL"))
+    private void initDataTrackerInjection(CallbackInfo ci) {
+        this.dataTracker.startTracking(IS_PAUSED, false);
+    }
 
-            if (this.bodyTrackingIncrements > 0) {
-                double d = this.getX() + (this.serverX - this.getX()) / (double) this.bodyTrackingIncrements;
-                double e = this.getY() + (this.serverY - this.getY()) / (double) this.bodyTrackingIncrements;
-                double f = this.getZ() + (this.serverZ - this.getZ()) / (double) this.bodyTrackingIncrements;
-                double g = MathHelper.wrapDegrees(this.serverYaw - (double) this.getYaw());
-                this.setYaw(this.getYaw() + (float) g / (float) this.bodyTrackingIncrements);
-                this.setPitch(this.getPitch() + (float) (this.serverPitch - (double) this.getPitch()) / (float) this.bodyTrackingIncrements);
-                --this.bodyTrackingIncrements;
-                this.setPosition(d, e, f);
-                this.setRotation(this.getYaw(), this.getPitch());
-            }
-
-            if (this.headTrackingIncrements > 0) {
-                this.headYaw += (float) MathHelper.wrapDegrees(this.serverHeadYaw - (double) this.headYaw) / (float) this.headTrackingIncrements;
-                --this.headTrackingIncrements;
-            }
-
+    @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
+    private void travelInjectionInjection(CallbackInfo ci) {
+        if (this.isPaused()) {
             ci.cancel();
         }
+    }
+
+    @Override
+    public void pause() {
+        this.dataTracker.set(IS_PAUSED, true);
+    }
+
+    @Override
+    public void unpause() {
+        this.dataTracker.set(IS_PAUSED, false);
+    }
+
+    @Override
+    public boolean isPaused() {
+        return this.dataTracker.get(IS_PAUSED);
     }
 }

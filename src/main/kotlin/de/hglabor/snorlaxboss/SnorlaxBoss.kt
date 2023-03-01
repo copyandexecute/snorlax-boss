@@ -7,6 +7,7 @@ import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
 import de.hglabor.snorlaxboss.extension.Network
+import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.particles.ParticleManager
 import de.hglabor.snorlaxboss.particles.Attacks
@@ -22,6 +23,7 @@ import net.minecraft.registry.Registry
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Text
 import net.silkmc.silk.commands.command
+import net.silkmc.silk.core.text.literal
 
 
 class SnorlaxBoss : ModInitializer {
@@ -63,6 +65,14 @@ class SnorlaxBoss : ModInitializer {
                         it.attack = Snorlax.Attack.valueOf(state())
                     }
                 }
+            }
+        }
+
+        command("randomitem") {
+            runs {
+                val player = this.source.playerOrThrow
+                val (item, slot) = player.randomMainInvItem ?: Pair(null, null)
+                this.source.sendMessage("${item.toString()} Slot: $slot".literal)
             }
         }
 

@@ -19,8 +19,11 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.server.network.ServerPlayerEntity
+import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvents
 import net.minecraft.util.math.Box
 import net.minecraft.world.World
+import net.silkmc.silk.core.entity.directionVector
 import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
@@ -35,6 +38,7 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
@@ -202,11 +206,49 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     inner class ShakingTargetTask : Task("Shaking") {
+        private val shakeDuration = 2.seconds
         override fun onEnable() {
-            val nextInt = Random.nextInt(5, 10)
-            server?.broadcastText("Shaking Target for ${nextInt} seconds")
-            mcCoroutineTask(delay = nextInt.seconds) {
-                isFinished = true
+            if (target != null) {
+                val pausePlayer = target as? IPauseEntityMovement?
+                val modifiedPlayer = target as? ModifiedPlayer?
+                val player = target as? PlayerEntity?
+
+                val direction = directionVector
+                val eyePos = eyePos.add(direction.multiply(2.0))
+                target?.teleport(eyePos.x, eyePos.y, eyePos.z)
+                pausePlayer?.pause()
+
+                mcCoroutineTask(delay = 13.ticks) {
+                    modifiedPlayer?.setShaky(true)
+
+                    infiniteMcCoroutineTask(period = 7.ticks) {
+                        if (isFinished) {
+                            this.cancel()
+                        } else {
+                            repeat(Random.nextInt(1, 3)) {
+                                val (item, slot) = player?.randomMainInvItem ?: return@repeat
+                                mcCoroutineTask(delay = it.ticks) {
+                                    world?.playSound(
+                                        null,
+                                        player.blockPos,
+                                        SoundEvents.ITEM_BUNDLE_DROP_CONTENTS,
+                                        SoundCategory.NEUTRAL,
+                                        1f,
+                                        1f
+                                    )
+                                    player.inventory.main[slot] = ItemStack.EMPTY
+                                    player.dropItem(item, true, false)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                mcCoroutineTask(delay = shakeDuration) {
+                    isFinished = true
+                    pausePlayer?.unpause()
+                    modifiedPlayer?.setShaky(false)
+                }
             }
         }
     }
