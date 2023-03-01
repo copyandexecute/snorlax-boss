@@ -76,9 +76,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 .add(EntityAttributes.GENERIC_ARMOR, 4.0).add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
         }
 
-        val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(2f, 2f)
+        val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(3.4f, 5.2f)
         private val POSE_DIMENSIONS: Map<Attack, EntityDimensions> = mutableMapOf(
-            Attack.SLEEP to EntityDimensions.changing(3f, 1f)
+            Attack.SLEEP to EntityDimensions.changing(5.2f, 1.5f)
         )
 
         private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, Network.ATTACK)
@@ -114,6 +114,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     override fun initDataTracker() {
         super.initDataTracker()
         dataTracker.startTracking(ATTACK, Attack.IDLE)
+    }
+
+    override fun onTrackedDataSet(data: TrackedData<*>?) {
+        super.onTrackedDataSet(data)
+        if (data?.equals(ATTACK) == true) {
+            calculateDimensions()
+        }
     }
 
     override fun getTarget(): LivingEntity? {
@@ -215,7 +222,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
                 val direction = directionVector
                 val eyePos = eyePos.add(direction.multiply(2.0))
-                target?.teleport(eyePos.x, eyePos.y, eyePos.z)
+                target?.teleport(eyePos.x, eyePos.y - 1.9, eyePos.z)
                 pausePlayer?.pause()
 
                 mcCoroutineTask(delay = 13.ticks) {

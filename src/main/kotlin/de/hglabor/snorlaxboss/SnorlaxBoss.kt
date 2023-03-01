@@ -33,7 +33,7 @@ class SnorlaxBoss : ModInitializer {
             "snorlax".toId(),
             FabricEntityTypeBuilder
                 .create(SpawnGroup.CREATURE) { type, world -> Snorlax(type, world) }
-                .dimensions(EntityDimensions.changing(2f, 2f)).build()
+                .dimensions(Snorlax.STANDING_DIMENSIONS).build()
         )
     }
 
