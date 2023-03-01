@@ -1,6 +1,6 @@
 package de.hglabor.snorlaxboss.mixin.entity.player;
 
-import de.hglabor.snorlaxboss.entity.ModifiedPlayer;
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.data.DataTracker;

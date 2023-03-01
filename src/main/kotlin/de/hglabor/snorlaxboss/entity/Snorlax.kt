@@ -1,5 +1,6 @@
 package de.hglabor.snorlaxboss.entity
 
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.*
 import de.hglabor.snorlaxboss.particles.Attacks
 import kotlinx.coroutines.Job

@@ -3,8 +3,9 @@ package de.hglabor.snorlaxboss
 import com.mojang.brigadier.arguments.DoubleArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.context.CommandContext
-import de.hglabor.snorlaxboss.entity.ModifiedPlayer
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.entity.Snorlax
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
 import de.hglabor.snorlaxboss.extension.Network
 import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.particles.ParticleManager
@@ -40,6 +41,7 @@ class SnorlaxBoss : ModInitializer {
 
         ParticleManager.init()
         Network.init()
+        ModifiedPlayerManager.init()
 
         fun CommandContext<ServerCommandSource>.getAllSnorlax(): MutableList<out Snorlax> {
             return this.source.world.getEntitiesByType(SNORLAX) { true }

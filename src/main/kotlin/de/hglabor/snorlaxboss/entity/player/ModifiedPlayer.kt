@@ -1,4 +1,4 @@
-package de.hglabor.snorlaxboss.entity
+package de.hglabor.snorlaxboss.entity.player
 
 interface ModifiedPlayer {
     fun isFlat(): Boolean

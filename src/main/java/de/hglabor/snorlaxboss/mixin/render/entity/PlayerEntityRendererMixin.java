@@ -1,8 +1,7 @@
 package de.hglabor.snorlaxboss.mixin.render.entity;
 
-import de.hglabor.snorlaxboss.entity.ModifiedPlayer;
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.OtherClientPlayerEntity;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
