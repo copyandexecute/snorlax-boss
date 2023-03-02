@@ -6,12 +6,16 @@ import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
 import de.hglabor.snorlaxboss.particles.Attacks
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
+import de.hglabor.snorlaxboss.utils.CustomHitBox
+import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
 import net.minecraft.entity.ai.pathing.EntityNavigation
 import net.minecraft.entity.attribute.DefaultAttributeContainer
+import net.minecraft.entity.attribute.EntityAttribute
+import net.minecraft.entity.attribute.EntityAttributeInstance
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.boss.BossBar
 import net.minecraft.entity.boss.ServerBossBar
@@ -22,7 +26,6 @@ import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
-import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
@@ -45,10 +48,8 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
     GeoEntity {
@@ -58,22 +59,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     enum class Attack(
         val animation: RawAnimation, val supplier: (Snorlax) -> Task
     ) {
-        SHAKING("shaking".play(), Snorlax::ShakingTargetTask), IDLE(
-            "check-target".play(),
-            Snorlax::IdleTargetTask
-        ),
-        BEAM("beam".play(), Snorlax::BeamTask), CHECK_TARGET(
-            "check-target".loop(),
-            Snorlax::CheckTargetTask
-        ),
-        PUNCH("punch".play(), Snorlax::PunchTargetTask), RUN(
-            "run".loop(),
-            Snorlax::RunToTargetTask
-        ),
-        BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask), SLEEP(
-            "sleep".once().loop("sleep-idle"),
-            Snorlax::SleepingTask
-        ),
+        SHAKING("shaking".play(), Snorlax::ShakingTargetTask),
+        IDLE("check-target".play(), Snorlax::IdleTargetTask),
+        BEAM("beam".play(), Snorlax::BeamTask),
+        CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
+        PUNCH("punch".play(), Snorlax::PunchTargetTask),
+        RUN("run".loop(), Snorlax::RunToTargetTask),
+        BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
+        SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepingTask),
         JUMP("jump".hold(), Snorlax::JumpTask);
     }
 
@@ -81,13 +74,19 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         fun createAttributes(): DefaultAttributeContainer.Builder {
             return MobEntity.createLivingAttributes().add(EntityAttributes.GENERIC_FOLLOW_RANGE, 35.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.23000000417232513)
-                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0).add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
-                .add(EntityAttributes.GENERIC_ARMOR, 4.0).add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
+                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0)
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
+                .add(EntityAttributes.GENERIC_ARMOR, 4.0)
+                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, KNOCKBACK_RESISTANCE_BASE)
+                .add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
         }
 
+        val KNOCKBACK_RESISTANCE_BASE = 0.6000000238418579
+
         val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(3.4f, 5.2f)
+        val SLEEPING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(5.2f, 1.5f)
         private val POSE_DIMENSIONS: Map<Attack, EntityDimensions> = mutableMapOf(
-            Attack.SLEEP to EntityDimensions.changing(5.2f, 1.5f)
+            Attack.SLEEP to SLEEPING_DIMENSIONS
         )
 
         private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, NetworkManager.ATTACK)
@@ -108,6 +107,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         bossBar.percent = this.health / this.maxHealth
     }
 
+    var customHitBox: EntityDimensions? = null
     var task: Task? = null
     var attack: Attack
         get() = this.dataTracker.get(ATTACK)
@@ -128,6 +128,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     override fun onTrackedDataSet(data: TrackedData<*>?) {
         super.onTrackedDataSet(data)
         if (data?.equals(ATTACK) == true) {
+            //TODO ich weiß nicht ob das mal probleme macht
+            //das ist dafür da dass auf dem client der task gesycned ist und die hitbox geupdatet wird nach x sekunden z.b. beim bellytask
+            //attack = attack
             calculateDimensions()
         }
     }
@@ -150,7 +153,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         bossBar.removePlayer(player)
     }
 
+    private val dimension: EntityDimensions
+        //Parameter ist irrelevant weil ich eh was anderes use
+        get() = getDimensions(EntityPose.STANDING)
+
     override fun createNavigation(world: World): EntityNavigation = SnorlaxNavigation(this, world)
+
+    private val EntityAttribute.instance: EntityAttributeInstance?
+        get() = attributes.getCustomInstance(this)
 
     sealed class Task(val name: String) {
         var jobs = mutableListOf<Job>()
@@ -160,13 +170,32 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         open fun nextTask(): Attack = Attack.IDLE
     }
 
+    override fun calculateBoundingBox(): Box {
+        return if (attack == Attack.SLEEP) {
+            dimension.getBoxAt(pos.subtract(directionVector.normalize().multiply(2.0)))
+        } else if (attack == Attack.BELLY_FLOP) {
+            if (customHitBox != null) {
+                //TODO junge hier ist diese kack rote eyepos hitbox in der luft aber bei sleep nicht man zukunftsmax kümmer dich drum was soll die scheiße
+                dimension.getBoxAt(pos.add(directionVector.normalize().multiply(2.0)))
+            } else {
+                dimension.getBoxAt(pos)
+            }
+        } else {
+            dimension.getBoxAt(pos)
+        }
+    }
+
     inner class SleepingTask : Task("Sleep") {
         override fun onEnable() {
+            EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE.times(2)
             val sleepSeconds = Random.nextLong(5, 10)
             Attacks.sleeping(this@Snorlax, sleepSeconds)
-            mcCoroutineTask(delay = sleepSeconds.seconds) {
-                isFinished = true
-            }
+            mcCoroutineTask(delay = sleepSeconds.seconds) { isFinished = true }
+        }
+
+        override fun onDisable() {
+            super.onDisable()
+            EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE
         }
     }
 
@@ -343,6 +372,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             val direction = to.subtract(from)
             modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
             modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
+
+            mcCoroutineTask(delay = 560.milliseconds) {
+                NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
+            }
+
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
 
@@ -359,11 +393,16 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
             }
         }
+
+        override fun onDisable() {
+            super.onDisable()
+            NetworkManager.REMOVE_CUSTOM_HIT_BOX_PACKET.sendToAll(UUIDWrapper(uuid))
+        }
     }
 
     //TODO Sleeping hitbox
     override fun getDimensions(pose: EntityPose): EntityDimensions {
-        return POSE_DIMENSIONS.getOrDefault(attack, STANDING_DIMENSIONS)
+        return customHitBox ?: POSE_DIMENSIONS.getOrDefault(attack, STANDING_DIMENSIONS)
     }
 
     override fun registerControllers(controller: AnimatableManager.ControllerRegistrar) {

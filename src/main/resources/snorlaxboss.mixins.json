@@ -4,6 +4,7 @@
   "package": "de.hglabor.snorlaxboss.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "accessor.WorldAccessor",
     "entity.LivingEntityMixin",
     "entity.player.PlayerEntityMixin"
   ],
