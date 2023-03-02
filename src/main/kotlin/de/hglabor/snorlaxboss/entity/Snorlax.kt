@@ -4,7 +4,8 @@ import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.*
 import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
-import de.hglabor.snorlaxboss.particles.Attacks
+import de.hglabor.snorlaxboss.particle.Attacks
+import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import de.hglabor.snorlaxboss.utils.CustomHitBox
 import de.hglabor.snorlaxboss.utils.UUIDWrapper
@@ -81,7 +82,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 .add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
         }
 
-        val KNOCKBACK_RESISTANCE_BASE = 0.6000000238418579
+        const val KNOCKBACK_RESISTANCE_BASE = 0.6000000238418579
 
         val STANDING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(3.4f, 5.2f)
         val SLEEPING_DIMENSIONS: EntityDimensions = EntityDimensions.changing(5.2f, 1.5f)
@@ -238,6 +239,18 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     inner class CheckTargetTask : Task("CheckTarget") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
+            val pos = eyePos.add(0.0, 2.5, 0.0)
+            (world as? ServerWorld?)?.spawnParticles(
+                ParticleManager.EXCLAMATION_MARK,
+                pos.x,
+                pos.y,
+                pos.z,
+                0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            )
             server?.broadcastText("Checking Target for ${nextInt} seconds")
             mcCoroutineTask(delay = nextInt.seconds) {
                 isFinished = true

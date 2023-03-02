@@ -9,8 +9,8 @@ import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
 import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.extension.toId
-import de.hglabor.snorlaxboss.particles.ParticleManager
-import de.hglabor.snorlaxboss.particles.Attacks
+import de.hglabor.snorlaxboss.particle.ParticleManager
+import de.hglabor.snorlaxboss.particle.Attacks
 import de.hglabor.snorlaxboss.render.SnorlaxRenderer
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry

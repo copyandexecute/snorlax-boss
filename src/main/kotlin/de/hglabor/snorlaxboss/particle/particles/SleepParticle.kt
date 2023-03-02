@@ -1,4 +1,4 @@
-package de.hglabor.snorlaxboss.particles
+package de.hglabor.snorlaxboss.particle.particles
 
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment

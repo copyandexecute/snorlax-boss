@@ -1,4 +1,4 @@
-package de.hglabor.snorlaxboss.particles
+package de.hglabor.snorlaxboss.particle
 
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
@@ -10,7 +10,6 @@ import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.effect.StatusEffectInstance
 import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.particle.ParticleTypes
