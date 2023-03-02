@@ -6,7 +6,7 @@ import com.mojang.brigadier.context.CommandContext
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
-import de.hglabor.snorlaxboss.extension.Network
+import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.particles.ParticleManager
@@ -16,7 +16,6 @@ import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
-import net.minecraft.entity.EntityDimensions
 import net.minecraft.entity.SpawnGroup
 import net.minecraft.registry.Registries
 import net.minecraft.registry.Registry
@@ -42,7 +41,7 @@ class SnorlaxBoss : ModInitializer {
         EntityRendererRegistry.register(SNORLAX) { SnorlaxRenderer(it) }
 
         ParticleManager.init()
-        Network.init()
+        NetworkManager.init()
         ModifiedPlayerManager.init()
 
         fun CommandContext<ServerCommandSource>.getAllSnorlax(): MutableList<out Snorlax> {

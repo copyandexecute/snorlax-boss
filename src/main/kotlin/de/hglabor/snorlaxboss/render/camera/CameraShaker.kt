@@ -2,6 +2,7 @@ package de.hglabor.snorlaxboss.render.camera
 
 import com.google.common.util.concurrent.AtomicDouble
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
+import kotlinx.serialization.Serializable
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.network.ClientPlayerEntity
 import net.minecraft.util.Util
@@ -52,7 +53,8 @@ object CameraShaker {
         fun getCameraShakeMagnitude(player: ClientPlayerEntity?): Double
     }
 
-    class BoomShake(private var magnitude: Double, private var sustain: Double, private var fade: Double) :
+    @Serializable
+    data class BoomShake(private var magnitude: Double, private var sustain: Double, private var fade: Double) :
         CameraShakeEvent {
         override fun isValid(t: Double): Boolean = t < sustain + fade
         override fun getCameraShakeMagnitude(t: Double): Double {

@@ -1,6 +1,8 @@
 package de.hglabor.snorlaxboss.particles
 
 import de.hglabor.snorlaxboss.entity.Snorlax
+import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
+import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import net.minecraft.block.AbstractFireBlock
 import net.minecraft.block.Block
 import net.minecraft.entity.Entity
@@ -8,6 +10,7 @@ import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.effect.StatusEffectInstance
 import net.minecraft.entity.effect.StatusEffects
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.particle.ParticleTypes
@@ -32,6 +35,12 @@ object Attacks {
         val vec3i = Vec3i(entity.blockX, entity.blockY - 1, entity.blockZ)
         val world = entity.world
         val hitRadius = 4.0
+
+        world.getOtherEntities(entity, Box.of(entity.pos, 15.0, 15.0, 15.0))
+            .filterIsInstance<ServerPlayerEntity>()
+            .forEach {
+                BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(.25, .0, .5), it)
+            }
 
         repeat(radius) { counter ->
             if (counter % 2 == 0) return@repeat

@@ -2,7 +2,10 @@ package de.hglabor.snorlaxboss.entity
 
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.*
+import de.hglabor.snorlaxboss.network.NetworkManager
+import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
 import de.hglabor.snorlaxboss.particles.Attacks
+import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import net.minecraft.entity.*
@@ -38,7 +41,6 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
@@ -65,7 +67,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             "sleep".once().loop("sleep-idle"),
             Snorlax::SleepingTask
         ),
-        JUMP("jump".hold(), Snorlax::JumpToPositionTask);
+        JUMP("jump".hold(), Snorlax::JumpTask);
     }
 
     companion object {
@@ -81,7 +83,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             Attack.SLEEP to EntityDimensions.changing(5.2f, 1.5f)
         )
 
-        private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, Network.ATTACK)
+        private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, NetworkManager.ATTACK)
     }
 
 
@@ -161,7 +163,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
-    inner class JumpToPositionTask : Task("Jump") {
+    inner class JumpTask : Task("Jump") {
         override fun onEnable() {
             modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
@@ -232,6 +234,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                         if (isFinished) {
                             this.cancel()
                         } else {
+
+                            (player as? ServerPlayerEntity?)?.apply {
+                                BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(.25, .0, .5), this)
+                            }
+
                             repeat(Random.nextInt(1, 3)) {
                                 val (item, slot) = player?.randomMainInvItem ?: return@repeat
                                 mcCoroutineTask(delay = it.ticks) {
