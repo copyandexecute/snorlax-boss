@@ -36,10 +36,12 @@ object Attacks {
         val world = entity.world
         val hitRadius = 4.0
 
-        world.getOtherEntities(entity, Box.of(entity.pos, 15.0, 15.0, 15.0))
+        world.getOtherEntities(entity, Box.from(entity.pos).expand(radius * 2.0))
             .filterIsInstance<ServerPlayerEntity>()
             .forEach {
-                BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(.25, .0, .5), it)
+                val distanceTo = entity.distanceTo(it)
+                val magnitude = 0.1.coerceAtLeast((radius - distanceTo) / 8.0)
+                BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(magnitude, .0, .5), it)
             }
 
         repeat(radius) { counter ->
