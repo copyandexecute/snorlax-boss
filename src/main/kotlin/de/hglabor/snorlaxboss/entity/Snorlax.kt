@@ -8,6 +8,7 @@ import de.hglabor.snorlaxboss.particles.Attacks
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
 import net.minecraft.entity.ai.pathing.EntityNavigation
 import net.minecraft.entity.attribute.DefaultAttributeContainer
@@ -21,7 +22,10 @@ import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.particle.DustParticleEffect
+import net.minecraft.particle.ParticleTypes
 import net.minecraft.server.network.ServerPlayerEntity
+import net.minecraft.server.world.ServerWorld
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvents
 import net.minecraft.util.math.Box
@@ -41,7 +45,10 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
     GeoEntity {
@@ -211,6 +218,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class IdleTargetTask : Task("Idle") {
         override fun onEnable() {
+            lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
         }
     }
 
@@ -292,9 +300,36 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     inner class BeamTask : Task("Beam") {
+        private val prepareTime = 1.seconds.plus(36.milliseconds)
+        private var isPreparing = true
         override fun onEnable() {
             lookAtEntity(target, 90f, 90f)
-            Attacks.hyperBeam(this@Snorlax, Random.nextLong(50, 150))
+
+            jobs += infiniteMcCoroutineTask {
+                if (isPreparing) {
+                    lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                    val pos = eyePos.add(directionVector.normalize().multiply(3.0))
+
+                    (world as? ServerWorld?)?.spawnParticles(
+                        ParticleTypes.SONIC_BOOM,
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                        1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
+                }
+            }
+
+            mcCoroutineTask(delay = prepareTime) {
+                isPreparing = false
+                lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                Attacks.hyperBeam(this@Snorlax, Random.nextLong(50, 150))
+            }
+
             mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
                 isFinished = true
             }
