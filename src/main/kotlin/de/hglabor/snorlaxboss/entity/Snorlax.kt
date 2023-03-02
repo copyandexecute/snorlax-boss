@@ -216,10 +216,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class ShakingTargetTask : Task("Shaking") {
         private val shakeDuration = 2.seconds
+        private var pausePlayer: IPauseEntityMovement? = null
+        private var modifiedPlayer: ModifiedPlayer? = null
         override fun onEnable() {
             if (target != null) {
-                val pausePlayer = target as? IPauseEntityMovement?
-                val modifiedPlayer = target as? ModifiedPlayer?
+                pausePlayer = target as? IPauseEntityMovement?
+                modifiedPlayer = target as? ModifiedPlayer?
                 val player = target as? PlayerEntity?
 
                 val direction = directionVector
@@ -230,40 +232,39 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 mcCoroutineTask(delay = 13.ticks) {
                     modifiedPlayer?.setShaky(true)
 
-                    infiniteMcCoroutineTask(period = 7.ticks) {
-                        if (isFinished) {
-                            this.cancel()
-                        } else {
+                    jobs += infiniteMcCoroutineTask(period = 1.ticks) {
+                        (player as? ServerPlayerEntity?)?.apply {
+                            BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(.30, .0, .5), this)
+                        }
+                    }
 
-                            (player as? ServerPlayerEntity?)?.apply {
-                                BOOM_SHAKE_PACKET.send(CameraShaker.BoomShake(.25, .0, .5), this)
-                            }
-
-                            repeat(Random.nextInt(1, 3)) {
-                                val (item, slot) = player?.randomMainInvItem ?: return@repeat
-                                mcCoroutineTask(delay = it.ticks) {
-                                    world?.playSound(
-                                        null,
-                                        player.blockPos,
-                                        SoundEvents.ITEM_BUNDLE_DROP_CONTENTS,
-                                        SoundCategory.NEUTRAL,
-                                        1f,
-                                        1f
-                                    )
-                                    player.inventory.main[slot] = ItemStack.EMPTY
-                                    player.dropItem(item, true, false)
-                                }
+                    jobs += infiniteMcCoroutineTask(period = 7.ticks) {
+                        repeat(Random.nextInt(1, 3)) {
+                            val (item, slot) = player?.randomMainInvItem ?: return@repeat
+                            mcCoroutineTask(delay = it.ticks) {
+                                world?.playSound(
+                                    null,
+                                    player.blockPos,
+                                    SoundEvents.ITEM_BUNDLE_DROP_CONTENTS,
+                                    SoundCategory.NEUTRAL,
+                                    1f,
+                                    1f
+                                )
+                                player.inventory.main[slot] = ItemStack.EMPTY
+                                player.dropItem(item, true, false)
                             }
                         }
                     }
                 }
 
-                mcCoroutineTask(delay = shakeDuration) {
-                    isFinished = true
-                    pausePlayer?.unpause()
-                    modifiedPlayer?.setShaky(false)
-                }
+                mcCoroutineTask(delay = shakeDuration) { isFinished = true }
             }
+        }
+
+        override fun onDisable() {
+            super.onDisable()
+            pausePlayer?.unpause()
+            modifiedPlayer?.setShaky(false)
         }
     }
 
