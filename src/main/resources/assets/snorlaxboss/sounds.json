@@ -1,0 +1,37 @@
+{
+  "jump": {
+    "sounds": [
+      "snorlaxboss:jump"
+    ]
+  },
+  "exclamation_mark": {
+    "sounds": [
+      "snorlaxboss:exclamation_mark"
+    ]
+  },
+  "foot_step": {
+    "sounds": [
+      "snorlaxboss:foot_step"
+    ]
+  },
+  "landing": {
+    "sounds": [
+      "snorlaxboss:landing"
+    ]
+  },
+  "shaking": {
+    "sounds": [
+      "snorlaxboss:shaking"
+    ]
+  },
+  "sleeping": {
+    "sounds": [
+      "snorlaxboss:sleeping"
+    ]
+  },
+  "searching_left": {
+    "sounds": [
+      "snorlaxboss:searching_left"
+    ]
+  }
+}

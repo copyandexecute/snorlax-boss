@@ -17,7 +17,7 @@ class ExclamationMarkParticle(
 ) : SpriteBillboardParticle(clientWorld, d, e, f, g, h, i) {
 
     init {
-        this.maxAge = 20
+        this.maxAge = 60
     }
 
     override fun move(speed: Float): Particle {

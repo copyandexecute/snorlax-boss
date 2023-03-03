@@ -12,6 +12,7 @@ import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.particle.Attacks
 import de.hglabor.snorlaxboss.render.SnorlaxRenderer
+import de.hglabor.snorlaxboss.sound.SoundManager
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
@@ -43,6 +44,7 @@ class SnorlaxBoss : ModInitializer {
         ParticleManager.init()
         NetworkManager.init()
         ModifiedPlayerManager.init()
+        SoundManager.init()
 
         fun CommandContext<ServerCommandSource>.getAllSnorlax(): MutableList<out Snorlax> {
             return this.source.world.getEntitiesByType(SNORLAX) { true }

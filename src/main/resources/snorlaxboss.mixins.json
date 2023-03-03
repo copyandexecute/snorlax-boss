@@ -12,7 +12,8 @@
     "option.KeyBindingMixin",
     "render.CameraMixin",
     "render.GameRendererMixin",
-    "render.entity.PlayerEntityRendererMixin"
+    "render.entity.PlayerEntityRendererMixin",
+    "world.ClientWorldMixin"
   ],
   "injectors": {
     "defaultRequire": 1
