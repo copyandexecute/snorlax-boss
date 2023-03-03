@@ -9,7 +9,9 @@ import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import de.hglabor.snorlaxboss.sound.SoundManager
 import de.hglabor.snorlaxboss.utils.CustomHitBox
+import de.hglabor.snorlaxboss.utils.WeightedCollection
 import de.hglabor.snorlaxboss.utils.UUIDWrapper
+import de.hglabor.snorlaxboss.utils.weightedCollection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import net.minecraft.block.BlockState
@@ -282,11 +284,21 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isFinished = true
             }
         }
+
+        override fun nextTask(): Attack {
+            return Attack.RUN
+        }
     }
 
     inner class IdleTargetTask : Task("Idle") {
         override fun onEnable() {
-            //lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                80.0 to Attack.CHECK_TARGET
+                20.0 to Attack.SLEEP
+            }.next()
         }
     }
 

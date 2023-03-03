@@ -13,6 +13,8 @@ import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.particle.Attacks
 import de.hglabor.snorlaxboss.render.SnorlaxRenderer
 import de.hglabor.snorlaxboss.sound.SoundManager
+import de.hglabor.snorlaxboss.utils.WeightedCollection
+import de.hglabor.snorlaxboss.utils.weightedCollection
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
