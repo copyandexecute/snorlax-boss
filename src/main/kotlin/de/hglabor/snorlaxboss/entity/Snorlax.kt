@@ -22,6 +22,7 @@ import net.minecraft.entity.attribute.EntityAttributeInstance
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.boss.BossBar
 import net.minecraft.entity.boss.ServerBossBar
+import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.data.DataTracker
 import net.minecraft.entity.data.TrackedData
 import net.minecraft.entity.mob.MobEntity
@@ -144,8 +145,16 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return world.getClosestPlayer(this, 40.0)
     }
 
-    override fun computeFallDamage(fallDistance: Float, damageMultiplier: Float): Int {
-        return super.computeFallDamage(fallDistance, damageMultiplier) - 100
+    override fun isFireImmune(): Boolean {
+        return true
+    }
+
+    override fun doesRenderOnFire(): Boolean {
+        return false
+    }
+
+    override fun handleFallDamage(fallDistance: Float, damageMultiplier: Float, damageSource: DamageSource?): Boolean {
+        return false
     }
 
     override fun onStartedTrackingBy(player: ServerPlayerEntity) {
