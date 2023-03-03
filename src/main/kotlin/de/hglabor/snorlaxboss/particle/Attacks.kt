@@ -24,8 +24,10 @@ import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.math.geometry.circlePositionSet
 import net.silkmc.silk.core.math.geometry.filledSpherePositionSet
+import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
 import kotlin.random.Random
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 
@@ -68,33 +70,34 @@ object Attacks {
 
     fun hyperBeam(
         livingEntity: LivingEntity,
-        length: Long = 100,
         particle: ParticleEffect = ParticleTypes.SONIC_BOOM,
-        withFire: Boolean = true
+        withFire: Boolean = true,
+        duration: Duration = 4.seconds
     ) {
         var eyePos = livingEntity.eyePos
         val dir = livingEntity.directionVector.normalize().multiply(1.0)
         val world = livingEntity.world as ServerWorld
+        val positions = mutableSetOf<Vec3d>()
 
-        mcCoroutineTask(howOften = length, period = 1.ticks) {
+        fun ParticleEffect.spawn(pos: Vec3d) {
             world.spawnParticles(
-                particle,
-                eyePos.x,
-                eyePos.y,
-                eyePos.z,
-                50,
+                this,
+                pos.x,
+                pos.y,
+                pos.z,
+                1,
                 (1 / 4.0f).toDouble(),
                 (1 / 4.0f).toDouble(),
                 (1 / 4.0f).toDouble(),
                 0.0
             )
 
-            Vec3i(eyePos.x, eyePos.y, eyePos.z).filledSpherePositionSet(3).forEach {
+            Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(3).forEach {
                 world.breakBlock(it, true, livingEntity)
             }
 
             if (withFire) {
-                Vec3i(eyePos.x, eyePos.y, eyePos.z).filledSpherePositionSet(2).forEach { pos ->
+                Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(2).forEach { pos ->
                     Direction.values().forEach { direction ->
                         val offset = pos.offset(direction)
                         if (AbstractFireBlock.canPlaceAt(world, offset, direction)) {
@@ -108,9 +111,21 @@ object Attacks {
                     }
                 }
             }
+        }
+
+        val job = infiniteMcCoroutineTask(period = 1.ticks) {
+            particle.spawn(eyePos)
+            positions.forEachIndexed { index, vec3d ->
+                mcCoroutineTask(delay = index.ticks) {
+                    particle.spawn(vec3d)
+                }
+            }
 
             eyePos = eyePos.add(dir)
+            positions += eyePos
         }
+
+        mcCoroutineTask(delay = duration) { job.cancel() }
     }
 
     fun sleeping(livingEntity: LivingEntity, durationInSeconds: Long) {

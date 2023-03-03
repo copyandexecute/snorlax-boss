@@ -12,6 +12,7 @@ import de.hglabor.snorlaxboss.utils.CustomHitBox
 import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import net.minecraft.block.BlockState
 import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
 import net.minecraft.entity.ai.pathing.EntityNavigation
@@ -29,17 +30,16 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.particle.ParticleTypes
-import net.minecraft.registry.Registry
-import net.minecraft.registry.entry.RegistryEntry
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvent
 import net.minecraft.sound.SoundEvents
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.World
 import net.silkmc.silk.core.entity.directionVector
 import net.silkmc.silk.core.entity.modifyVelocity
-import net.silkmc.silk.core.entity.posUnder
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
@@ -193,11 +193,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     inner class SleepingTask : Task("Sleep") {
         override fun onEnable() {
             EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE.times(2)
-            val sleepSeconds = Random.nextLong(5, 10)
-            world.playSoundFromEntity(null, this@Snorlax, SoundManager.SLEEPING, SoundCategory.HOSTILE, 1f, 1f)
-            //this@Snorlax.playSound(SoundManager.SLEEPING, 1f, 1f)
-            Attacks.sleeping(this@Snorlax, sleepSeconds)
-            mcCoroutineTask(delay = sleepSeconds.seconds) { isFinished = true }
+            sound(SoundManager.SLEEPING, 0.4f, 1f)
+            Attacks.sleeping(this@Snorlax, 7)
+            mcCoroutineTask(delay = 7.seconds) { isFinished = true }
         }
 
         override fun onDisable() {
@@ -208,18 +206,23 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class JumpTask : Task("Jump") {
         override fun onEnable() {
-            this@Snorlax.playSound(SoundManager.JUMP, 0.3f, 0.5f)
+            sound(SoundManager.JUMP, 0.9f, 0.9f)
             modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
                 if (isGrounded) {
                     mcCoroutineTask(delay = 2.seconds) { isFinished = isOnGround }
-                    this@Snorlax.playSound(SoundManager.LANDING, 1f, 1f)
-                    Attacks.radialWave(this@Snorlax, Random.nextInt(8, 30))
+                    val radius = Random.nextInt(8, 30)
+                    sound(SoundManager.LANDING, 0.2f + radius / 30f, 1f)
+                    Attacks.radialWave(this@Snorlax, radius)
                     this.cancel()
                 }
             }
         }
+    }
+
+    override fun playStepSound(pos: BlockPos, state: BlockState) {
+        playSound(SoundManager.FOOT_STEP, 1f, 0.6f)
     }
 
     inner class RunToTargetTask : Task("Run") {
@@ -227,7 +230,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             jobs += infiniteMcCoroutineTask {
                 if (target == null) {
                 } else {
-                    if (pos.distanceTo(target!!.pos) >= 8f) {
+                    if (pos.distanceTo(target!!.pos) >= 4f) {
                         if (navigation.isIdle) {
                             navigation.startMovingTo(target, 2.0)
                         }
@@ -246,9 +249,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class CheckTargetTask : Task("CheckTarget") {
         override fun onEnable() {
-            val nextInt = Random.nextInt(5, 10)
+            val nextInt = Random.nextInt(1, 5)
 
-            //world.playSoundFromEntity(LEFT,RIGHT)
+            jobs += infiniteMcCoroutineTask(period = 20.ticks) {
+                sound(SoundManager.SEARCHING_LEFT, 1f, 1f)
+            }
 
             mcCoroutineTask(delay = nextInt.seconds) {
                 lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
@@ -264,7 +269,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     0.0,
                     0.0
                 )
-                this@Snorlax.playSound(SoundManager.EXCLAMATION_MARK, 1f, 1f)
+                sound(SoundManager.EXCLAMATION_MARK, 1f, 1f)
                 isFinished = true
             }
         }
@@ -293,8 +298,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
                 mcCoroutineTask(delay = 13.ticks) {
                     modifiedPlayer?.setShaky(true)
-                    this@Snorlax.playSound(SoundManager.SHAKING, 1f, 1f)
-                    //world.playSound(null,target!!.blockPos,SHAKING)
+                    sound(SoundManager.SHAKING, 1f, 1f)
 
                     jobs += infiniteMcCoroutineTask(period = 1.ticks) {
                         (player as? ServerPlayerEntity?)?.apply {
@@ -356,13 +360,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     inner class BeamTask : Task("Beam") {
-        private val prepareTime = 1.seconds.plus(36.milliseconds)
+        private val prepareTime = 3.seconds
         private var isPreparing = true
         override fun onEnable() {
             lookAtEntity(target, 90f, 90f)
 
-            //world.playSoundFromEntity(null,this)
-            this@Snorlax.playSound(SoundManager.HYPERBEAM, 1f, 1f)
+            sound(SoundManager.HYPERBEAM, 5f, 1f)
 
             jobs += infiniteMcCoroutineTask {
                 if (isPreparing) {
@@ -386,7 +389,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             mcCoroutineTask(delay = prepareTime) {
                 isPreparing = false
                 lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
-                Attacks.hyperBeam(this@Snorlax, Random.nextLong(50, 150))
+                Attacks.hyperBeam(this@Snorlax)
             }
 
             mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
@@ -402,7 +405,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             val direction = to.subtract(from)
             modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
             modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
-            world.playSoundFromEntity(null, this@Snorlax, SoundManager.JUMP, SoundCategory.NEUTRAL, 1f, 1f)
+            sound(SoundManager.JUMP, 1f, 1f)
 
             mcCoroutineTask(delay = 560.milliseconds) {
                 NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
@@ -441,6 +444,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             super.onDisable()
             NetworkManager.REMOVE_CUSTOM_HIT_BOX_PACKET.sendToAll(UUIDWrapper(uuid))
         }
+    }
+
+    private fun sound(soundEvent: SoundEvent, volume: Float, pitch: Float) {
+        world.playSoundFromEntity(null, this, soundEvent, SoundCategory.HOSTILE, volume, pitch)
     }
 
     //TODO Sleeping hitbox
