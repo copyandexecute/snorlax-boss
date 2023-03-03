@@ -190,6 +190,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onEnable() {
             EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE.times(2)
             val sleepSeconds = Random.nextLong(5, 10)
+            //world.playSoundFromEntity(null,this,SLEEP)
             Attacks.sleeping(this@Snorlax, sleepSeconds)
             mcCoroutineTask(delay = sleepSeconds.seconds) { isFinished = true }
         }
@@ -202,11 +203,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class JumpTask : Task("Jump") {
         override fun onEnable() {
+            //world.playSoundFromEntity(null,this,)
             modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
                 if (isGrounded) {
                     mcCoroutineTask(delay = 2.seconds) { isFinished = isOnGround }
+                    //world.playSoundFromEntity(null,this,Landing)
                     Attacks.radialWave(this@Snorlax, Random.nextInt(8, 30))
                     this.cancel()
                 }
@@ -239,20 +242,23 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     inner class CheckTargetTask : Task("CheckTarget") {
         override fun onEnable() {
             val nextInt = Random.nextInt(5, 10)
-            val pos = eyePos.add(0.0, 2.5, 0.0)
-            (world as? ServerWorld?)?.spawnParticles(
-                ParticleManager.EXCLAMATION_MARK,
-                pos.x,
-                pos.y,
-                pos.z,
-                0,
-                0.0,
-                0.0,
-                0.0,
-                0.0
-            )
-            server?.broadcastText("Checking Target for ${nextInt} seconds")
+
+            //world.playSoundFromEntity(LEFT,RIGHT)
+
             mcCoroutineTask(delay = nextInt.seconds) {
+                val pos = eyePos.add(0.0, 2.5, 0.0)
+                (world as? ServerWorld?)?.spawnParticles(
+                    ParticleManager.EXCLAMATION_MARK,
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                    0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                )
+                //world.playSoundFromEntity(null,this,blockPos,EXCLAMATIONMARK)
                 isFinished = true
             }
         }
@@ -281,6 +287,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
                 mcCoroutineTask(delay = 13.ticks) {
                     modifiedPlayer?.setShaky(true)
+                    //world.playSound(null,target!!.blockPos,SHAKING)
 
                     jobs += infiniteMcCoroutineTask(period = 1.ticks) {
                         (player as? ServerPlayerEntity?)?.apply {
@@ -347,6 +354,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onEnable() {
             lookAtEntity(target, 90f, 90f)
 
+            //world.playSoundFromEntity(null,this)
+
             jobs += infiniteMcCoroutineTask {
                 if (isPreparing) {
                     lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
@@ -385,6 +394,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             val direction = to.subtract(from)
             modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
             modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
+            //world.playSoundFromEntity(null,this)
 
             mcCoroutineTask(delay = 560.milliseconds) {
                 NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
@@ -397,9 +407,21 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     mcCoroutineTask(delay = 1.seconds) { isFinished = isOnGround }
                     world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
                         .forEach { player ->
+                            world.playSound(
+                                null,
+                                player.blockPos,
+                                SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT,
+                                SoundCategory.PLAYERS
+                            )
                             (player as ModifiedPlayer).setFlat(true)
                             mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
                                 (player as ModifiedPlayer).setFlat(false)
+                                world.playSound(
+                                    null,
+                                    player.blockPos,
+                                    SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP,
+                                    SoundCategory.PLAYERS
+                                )
                             }
                         }
                     this.cancel()
