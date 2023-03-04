@@ -19,6 +19,7 @@ import net.minecraft.util.math.Box
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.util.math.Vec3i
+import net.minecraft.world.Heightmap
 import net.silkmc.silk.core.entity.directionVector
 import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
@@ -30,15 +31,13 @@ import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-
 object Attacks {
     fun radialWave(entity: LivingEntity, radius: Int) {
         val vec3i = Vec3i(entity.blockX, entity.blockY - 1, entity.blockZ)
         val world = entity.world
         val hitRadius = 4.0
 
-        world.getOtherEntities(entity, Box.from(entity.pos).expand(radius * 2.0))
-            .filterIsInstance<ServerPlayerEntity>()
+        world.getOtherEntities(entity, Box.from(entity.pos).expand(radius * 2.0)).filterIsInstance<ServerPlayerEntity>()
             .forEach {
                 val distanceTo = entity.distanceTo(it)
                 val magnitude = 0.1.coerceAtLeast((radius - distanceTo) / 8.0)
@@ -49,11 +48,14 @@ object Attacks {
             if (counter % 2 == 0) return@repeat
             mcCoroutineTask(delay = counter.ticks) {
                 val fallingBlocks = mutableListOf<FallingBlockEntity>()
-                vec3i.circlePositionSet(counter).forEach { pos ->
-                    val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
-                    fallingBlocks += fallingBlockEntity
-                    fallingBlockEntity.modifyVelocity(0, 0.5, 0)
-                }
+                vec3i.circlePositionSet(counter).map {
+                        //TODO jop das problem ist hier wenn der erdbeben in höhle macht wird immer top position geused eig dumm aber mir egal fighte halt einfach immer oben
+                        world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, it).down()
+                    }.forEach { pos ->
+                        val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
+                        fallingBlocks += fallingBlockEntity
+                        fallingBlockEntity.modifyVelocity(0, 0.5, 0)
+                    }
                 val affectedEntities = mutableSetOf<Entity>()
                 for (block in fallingBlocks) {
                     affectedEntities.addAll(world.getEntitiesByClass(
@@ -81,15 +83,7 @@ object Attacks {
 
         fun ParticleEffect.spawn(pos: Vec3d) {
             world.spawnParticles(
-                this,
-                pos.x,
-                pos.y,
-                pos.z,
-                1,
-                (1 / 4.0f).toDouble(),
-                (1 / 4.0f).toDouble(),
-                (1 / 4.0f).toDouble(),
-                0.0
+                this, pos.x, pos.y, pos.z, 1, (1 / 4.0f).toDouble(), (1 / 4.0f).toDouble(), (1 / 4.0f).toDouble(), 0.0
             )
 
             Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(3).forEach {
@@ -158,15 +152,7 @@ object Attacks {
                         else -> ParticleManager.SLEEP
                     }
                     world.spawnParticles(
-                        particle,
-                        particlePos.x + yOffset,
-                        particlePos.y + yOffset,
-                        particlePos.z,
-                        0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0
+                        particle, particlePos.x + yOffset, particlePos.y + yOffset, particlePos.z, 0, 0.0, 0.0, 0.0, 0.0
                     )
                 }
             }
