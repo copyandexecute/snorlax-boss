@@ -9,7 +9,6 @@ import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import de.hglabor.snorlaxboss.sound.SoundManager
 import de.hglabor.snorlaxboss.utils.CustomHitBox
-import de.hglabor.snorlaxboss.utils.WeightedCollection
 import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import de.hglabor.snorlaxboss.utils.weightedCollection
 import kotlinx.coroutines.Job
@@ -147,17 +146,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return world.getClosestPlayer(this, 40.0)
     }
 
-    override fun isFireImmune(): Boolean {
-        return true
-    }
-
-    override fun doesRenderOnFire(): Boolean {
-        return false
-    }
-
-    override fun handleFallDamage(fallDistance: Float, damageMultiplier: Float, damageSource: DamageSource?): Boolean {
-        return false
-    }
+    override fun isFireImmune(): Boolean = true
+    override fun doesRenderOnFire(): Boolean = false
+    override fun handleFallDamage(fallDistance: Float, damageMultiplier: Float, damageSource: DamageSource?) = false
+    override fun createNavigation(world: World): EntityNavigation = SnorlaxNavigation(this, world)
+    private val dimension: EntityDimensions get() = getDimensions(EntityPose.STANDING)
+    private val EntityAttribute.instance: EntityAttributeInstance? get() = attributes.getCustomInstance(this)
 
     override fun onStartedTrackingBy(player: ServerPlayerEntity) {
         super.onStartedTrackingBy(player)
@@ -168,15 +162,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         super.onStoppedTrackingBy(player)
         bossBar.removePlayer(player)
     }
-
-    private val dimension: EntityDimensions
-        //Parameter ist irrelevant weil ich eh was anderes use
-        get() = getDimensions(EntityPose.STANDING)
-
-    override fun createNavigation(world: World): EntityNavigation = SnorlaxNavigation(this, world)
-
-    private val EntityAttribute.instance: EntityAttributeInstance?
-        get() = attributes.getCustomInstance(this)
 
     sealed class Task(val name: String) {
         var jobs = mutableListOf<Job>()
@@ -213,6 +198,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             super.onDisable()
             EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                80.0 to Attack.CHECK_TARGET
+                20.0 to Attack.RUN
+            }.next()
+        }
     }
 
     inner class JumpTask : Task("Jump") {
@@ -230,6 +222,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
             }
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                95.0 to Attack.RUN
+                5.0 to Attack.SLEEP
+            }.next()
+        }
     }
 
     override fun playStepSound(pos: BlockPos, state: BlockState) {
@@ -240,6 +239,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onEnable() {
             jobs += infiniteMcCoroutineTask {
                 if (target == null) {
+                    isFinished = true
                 } else {
                     if (pos.distanceTo(target!!.pos) >= 4f) {
                         if (navigation.isIdle) {
@@ -256,48 +256,84 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             super.onDisable()
             navigation.stop()
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                if (target == null) {
+                    100.0 to Attack.CHECK_TARGET
+                } else {
+                    40.0 to Attack.PUNCH
+                    25.0 to Attack.BELLY_FLOP
+                    16.0 to Attack.JUMP
+                    15.0 to Attack.SHAKING
+                    4.0 to Attack.BEAM
+                }
+            }.next()
+        }
     }
 
     inner class CheckTargetTask : Task("CheckTarget") {
-        override fun onEnable() {
-            val nextInt = Random.nextInt(1, 5)
+        private val checkingDuration = Random.nextInt(1, 5)
 
+        override fun onEnable() {
             jobs += infiniteMcCoroutineTask(period = 20.ticks) {
                 sound(SoundManager.SEARCHING_LEFT, 1f, 1f)
             }
 
-            mcCoroutineTask(delay = nextInt.seconds) {
-                lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
-                val pos = eyePos.add(0.0, 2.5, 0.0)
-                (world as? ServerWorld?)?.spawnParticlesForcefully(
-                    ParticleManager.EXCLAMATION_MARK,
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0
-                )
-                sound(SoundManager.EXCLAMATION_MARK, 1f, 1f)
+            mcCoroutineTask(delay = checkingDuration.seconds) {
+                if (target != null) {
+                    lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                    val pos = eyePos.add(0.0, 2.5, 0.0)
+                    (world as? ServerWorld?)?.spawnParticlesForcefully(
+                        ParticleManager.EXCLAMATION_MARK,
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                        0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
+                    sound(SoundManager.EXCLAMATION_MARK, 1f, 1f)
+                }
                 isFinished = true
             }
         }
 
         override fun nextTask(): Attack {
-            return Attack.RUN
+            return weightedCollection {
+                if (target == null) {
+                    100.0 to Attack.IDLE
+                } else {
+                    90.0 to Attack.RUN
+                    10.0 to Attack.BEAM
+                }
+            }.next()
         }
     }
 
     inner class IdleTargetTask : Task("Idle") {
         override fun onEnable() {
+            mcCoroutineTask(delay = Random.nextInt(5, 15).seconds) {
+                isFinished = true
+            }
+            jobs += infiniteMcCoroutineTask {
+                if (attacker != null) {
+                    target = attacker
+                    isFinished = true
+                }
+            }
         }
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                80.0 to Attack.CHECK_TARGET
-                20.0 to Attack.SLEEP
+                if (target != null) {
+                    100.0 to Attack.RUN
+                } else {
+                    80.0 to Attack.CHECK_TARGET
+                    20.0 to Attack.SLEEP
+                }
             }.next()
         }
     }
@@ -306,6 +342,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val shakeDuration = 2.seconds
         private var pausePlayer: IPauseEntityMovement? = null
         private var modifiedPlayer: ModifiedPlayer? = null
+
         override fun onEnable() {
             if (target != null) {
                 pausePlayer = target as? IPauseEntityMovement?
@@ -347,6 +384,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
 
                 mcCoroutineTask(delay = shakeDuration) { isFinished = true }
+            } else {
+                isFinished = true
             }
         }
 
@@ -355,11 +394,22 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             pausePlayer?.unpause()
             modifiedPlayer?.setShaky(false)
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                if (target != null) {
+                    75.0 to Attack.PUNCH
+                    25.0 to Attack.JUMP
+                } else {
+
+                }
+            }.next()
+        }
     }
 
     inner class PunchTargetTask : Task("Punch") {
+        private val radius = 15.0
         override fun onEnable() {
-            val radius = 15.0
             mcCoroutineTask(delay = 5.ticks) {
                 world.getOtherEntities(this@Snorlax, Box.of(pos, radius, radius, radius)).filter(::canSee)
                     .filterIsInstance<LivingEntity>().forEach(::attack)
@@ -372,11 +422,40 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private fun attack(entity: LivingEntity) {
             this@Snorlax.tryAttack(entity)
             val player = entity as? PlayerEntity ?: return
+            when (weightedCollection {
+                33.3 to "ICE"
+                33.3 to "SHIELD"
+                33.3 to "FIRE"
+            }.next()) {
+                "SHIELD" -> shieldBreaker(player)
+                "ICE" -> icePunch(player)
+                "FIRE" -> firePunch(player)
+            }
+        }
+
+        private fun firePunch(player: PlayerEntity) {
+            player.setOnFireFor(Random.nextInt(1, 5))
+        }
+
+        private fun icePunch(player: PlayerEntity) {
+            player.frozenTicks = Random.nextInt(20, 80)
+        }
+
+        private fun shieldBreaker(player: PlayerEntity) {
             val item = if (player.isUsingItem) player.activeItem else ItemStack.EMPTY
             if (item.isOf(Items.SHIELD)) {
                 player.itemCooldownManager.set(Items.SHIELD, 100)
                 world.sendEntityStatus(player, EntityStatuses.BREAK_SHIELD)
             }
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                17.0 to Attack.JUMP
+                40.0 to Attack.BELLY_FLOP
+                40.0 to Attack.RUN
+                3.0 to Attack.BEAM
+            }.next()
         }
     }
 
@@ -417,46 +496,58 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isFinished = true
             }
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                48.0 to Attack.CHECK_TARGET
+                48.0 to Attack.RUN
+                4.0 to Attack.SLEEP
+            }.next()
+        }
     }
 
     inner class BellyFlopTask : Task("BellyFlop") {
         override fun onEnable() {
-            val from = pos
-            val to = target!!.pos //TODO nullcheck
-            val direction = to.subtract(from)
-            modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
-            modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
-            sound(SoundManager.JUMP, 1f, 1f)
+            if (target == null) {
+                isFinished = true
+            } else {
+                val from = pos
+                val to = target!!.pos //TODO nullcheck
+                val direction = to.subtract(from)
+                modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
+                modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
+                sound(SoundManager.JUMP, 1f, 1f)
 
-            mcCoroutineTask(delay = 560.milliseconds) {
-                NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
-            }
+                mcCoroutineTask(delay = 560.milliseconds) {
+                    NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
+                }
 
-            jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
-                val isGrounded = isOnGround
+                jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
+                    val isGrounded = isOnGround
 
-                if (isGrounded) {
-                    mcCoroutineTask(delay = 1.seconds) { isFinished = isOnGround }
-                    world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
-                        .forEach { player ->
-                            world.playSound(
-                                null,
-                                player.blockPos,
-                                SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT,
-                                SoundCategory.PLAYERS
-                            )
-                            (player as ModifiedPlayer).setFlat(true)
-                            mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
-                                (player as ModifiedPlayer).setFlat(false)
+                    if (isGrounded) {
+                        mcCoroutineTask(delay = 1.seconds) { isFinished = isOnGround }
+                        world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
+                            .forEach { player ->
                                 world.playSound(
                                     null,
                                     player.blockPos,
-                                    SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP,
+                                    SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT,
                                     SoundCategory.PLAYERS
                                 )
+                                (player as ModifiedPlayer).setFlat(true)
+                                mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
+                                    (player as ModifiedPlayer).setFlat(false)
+                                    world.playSound(
+                                        null,
+                                        player.blockPos,
+                                        SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP,
+                                        SoundCategory.PLAYERS
+                                    )
+                                }
                             }
-                        }
-                    this.cancel()
+                        this.cancel()
+                    }
                 }
             }
         }
@@ -464,6 +555,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onDisable() {
             super.onDisable()
             NetworkManager.REMOVE_CUSTOM_HIT_BOX_PACKET.sendToAll(UUIDWrapper(uuid))
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                80.0 to Attack.RUN
+                18.0 to Attack.CHECK_TARGET
+                2.0 to Attack.SLEEP
+            }.next()
         }
     }
 
