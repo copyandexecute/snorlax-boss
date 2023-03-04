@@ -5,6 +5,7 @@ import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import net.minecraft.block.AbstractFireBlock
 import net.minecraft.block.Block
+import net.minecraft.block.Blocks
 import net.minecraft.entity.Entity
 import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
@@ -87,7 +88,9 @@ object Attacks {
             )
 
             Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(3).forEach {
-                world.breakBlock(it, true, livingEntity)
+                if (!world.getBlockState(it).isOf(Blocks.FIRE)) {
+                    world.breakBlock(it, true, livingEntity)
+                }
             }
 
             if (withFire) {
