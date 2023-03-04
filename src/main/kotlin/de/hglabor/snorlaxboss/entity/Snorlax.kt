@@ -47,14 +47,12 @@ import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
-import net.silkmc.silk.core.text.broadcastText
 import net.silkmc.silk.core.text.literalText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager
 import software.bernie.geckolib.core.animation.Animation
 import software.bernie.geckolib.core.animation.AnimationController
-import software.bernie.geckolib.core.animation.AnimationController.ParticleKeyframeHandler
 import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
@@ -66,6 +64,24 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     GeoEntity {
     private val factory = GeckoLibUtil.createInstanceCache(this)
     private val bossBar = ServerBossBar(literalText("Snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
+    private var isDebug: Boolean
+        get() = this.dataTracker.get(IS_DEBUG)
+        set(value) = this.dataTracker.set(IS_DEBUG, value)
+
+    private var task: Task? = null
+    var customHitBox: EntityDimensions? = null
+    var attack: Attack
+        get() = this.dataTracker.get(ATTACK)
+        set(value) {
+            this.dataTracker.set(ATTACK, value)
+            task?.onDisable()
+            task = value.supplier.invoke(this)
+            task?.onEnable()
+        }
+
+    init {
+        attack = attack
+    }
 
     enum class Attack(
         val animation: RawAnimation, val supplier: (Snorlax) -> Task
@@ -125,21 +141,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         super.mobTick()
         bossBar.percent = this.health / this.maxHealth
     }
-
-    private var isDebug: Boolean
-        get() = this.dataTracker.get(IS_DEBUG)
-        set(value) = this.dataTracker.set(IS_DEBUG, value)
-
-    var customHitBox: EntityDimensions? = null
-    var task: Task? = null
-    var attack: Attack
-        get() = this.dataTracker.get(ATTACK)
-        set(value) {
-            this.dataTracker.set(ATTACK, value)
-            task?.onDisable()
-            task = value.supplier.invoke(this)
-            task?.onEnable()
-        }
 
     override fun initDataTracker() {
         super.initDataTracker()
@@ -242,7 +243,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 val isGrounded = isOnGround
                 if (isGrounded) {
                     mcCoroutineTask(delay = 2.seconds) { isFinished = isOnGround }
-                    val radius = Random.nextInt(8, 30)
+                    val radius = Random.nextInt(12, 30)
                     sound(SoundManager.LANDING, 0.2f + radius / 30f, 1f)
                     Attacks.radialWave(this@Snorlax, radius)
                     this.cancel()
@@ -289,11 +290,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 if (target == null) {
                     100.0 to Attack.CHECK_TARGET
                 } else {
-                    40.0 to Attack.PUNCH
-                    25.0 to Attack.BELLY_FLOP
-                    16.0 to Attack.JUMP
-                    15.0 to Attack.SHAKING
-                    4.0 to Attack.BEAM
+                    70.0 to Attack.PUNCH
+                    19.0 to Attack.BELLY_FLOP
+                    5.0 to Attack.JUMP
+                    5.0 to Attack.SHAKING
+                    1.0 to Attack.BEAM
                 }
             }.next()
         }
@@ -367,12 +368,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class ShakingTargetTask : Task("Shaking") {
         private val shakeDuration = 2.seconds
-        private var pausePlayer: IPauseEntityMovement? = null
+        private var pausePlayer: ILivingEntity? = null
         private var modifiedPlayer: ModifiedPlayer? = null
 
         override fun onEnable() {
             if (target != null) {
-                pausePlayer = target as? IPauseEntityMovement?
+                pausePlayer = target as? ILivingEntity?
                 modifiedPlayer = target as? ModifiedPlayer?
                 val player = target as? PlayerEntity?
 
@@ -461,11 +462,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         private fun firePunch(player: PlayerEntity) {
-            player.setOnFireFor(Random.nextInt(1, 5))
+            player.setOnFireFor(Random.nextInt(3, 7))
         }
 
         private fun icePunch(player: PlayerEntity) {
-            player.frozenTicks = Random.nextInt(20, 80)
+            player.frozenTicks = Random.nextInt(3, 7) * 20
         }
 
         private fun shieldBreaker(player: PlayerEntity) {

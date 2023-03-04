@@ -1,6 +1,8 @@
 package de.hglabor.snorlaxboss.particle
 
+import de.hglabor.snorlaxboss.entity.ILivingEntity
 import de.hglabor.snorlaxboss.entity.Snorlax
+import de.hglabor.snorlaxboss.entity.damage.DamageManager
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import net.minecraft.block.AbstractFireBlock
@@ -9,6 +11,7 @@ import net.minecraft.block.Blocks
 import net.minecraft.entity.Entity
 import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
+import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.effect.StatusEffectInstance
 import net.minecraft.entity.effect.StatusEffects
 import net.minecraft.particle.DustParticleEffect
@@ -50,13 +53,13 @@ object Attacks {
             mcCoroutineTask(delay = counter.ticks) {
                 val fallingBlocks = mutableListOf<FallingBlockEntity>()
                 vec3i.circlePositionSet(counter).map {
-                        //TODO jop das problem ist hier wenn der erdbeben in höhle macht wird immer top position geused eig dumm aber mir egal fighte halt einfach immer oben
-                        world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, it).down()
-                    }.forEach { pos ->
-                        val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
-                        fallingBlocks += fallingBlockEntity
-                        fallingBlockEntity.modifyVelocity(0, 0.5, 0)
-                    }
+                    //TODO jop das problem ist hier wenn der erdbeben in höhle macht wird immer top position geused eig dumm aber mir egal fighte halt einfach immer oben
+                    world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, it).down()
+                }.forEach { pos ->
+                    val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
+                    fallingBlocks += fallingBlockEntity
+                    fallingBlockEntity.modifyVelocity(0, 0.5, 0)
+                }
                 val affectedEntities = mutableSetOf<Entity>()
                 for (block in fallingBlocks) {
                     affectedEntities.addAll(world.getEntitiesByClass(
@@ -114,6 +117,11 @@ object Attacks {
             particle.spawn(eyePos)
             positions.forEachIndexed { index, vec3d ->
                 mcCoroutineTask(delay = index.ticks) {
+                    world
+                        .getOtherEntities(null /* livingEntity */, Box.from(vec3d).expand(1.5))
+                        .filterIsInstance<LivingEntity>().forEach {
+                            it.damage(DamageManager.HYPERBEAM, 4f)
+                        }
                     particle.spawn(vec3d)
                 }
             }
@@ -159,41 +167,6 @@ object Attacks {
                     )
                 }
             }
-        }
-    }
-
-    fun beam(player: ServerPlayerEntity, radius: Double, length: Int) {
-        // Number of points on each circle to show a particle
-        val circlePoints = 100
-
-        // Maximum radius before shrinking again.
-        var eyePos = player.eyePos
-        val world: ServerWorld = player.world as ServerWorld
-
-        // Get the player's looking direction and multiply it by 0.5
-        // 0.5 is the number of blocks each new ring will be away from the previous ring
-        val dir = player.directionVector.normalize().multiply(0.1)
-        val pitch =
-            (player.pitch + 90.0f) * 0.017453292f // Need these in radians, not degrees or the circle flattens out sometimes
-        val yaw = -player.yaw * 0.017453292f // Need these in radians, not degrees or the circle flattens out sometimes
-        val increment = 2 * Math.PI / circlePoints
-
-        // Max beam length
-        repeat(length) {
-            // This calculates the radius for the current circle/ring in the pattern
-            for (i in 0 until circlePoints) {
-                val angle = i * increment // Angle on the circle
-                val x = radius * kotlin.math.cos(angle)
-                val z = radius * kotlin.math.sin(angle)
-                var vec = Vec3d(x, 0.0, z)
-                vec = vec.rotateX(pitch)
-                vec = vec.rotateY(yaw)
-                val pos = eyePos.add(vec)
-                world.spawnParticles(
-                    DustParticleEffect.DEFAULT, pos.x, pos.y, pos.z, 0, 0.0, 0.0, 0.0, 0.0
-                ) // Reminder to self - the "data" option for a (particle, location, data) is speed, not count!!
-            }
-            eyePos = eyePos.add(dir)
         }
     }
 }

@@ -1,8 +1,10 @@
 package de.hglabor.snorlaxboss.mixin.entity.player;
 
+import de.hglabor.snorlaxboss.entity.damage.DamageManager;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -33,6 +35,15 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
             return 0.42F * this.getJumpVelocityMultiplier();
         } else {
             return 0.22F * this.getJumpVelocityMultiplier();
+        }
+    }
+
+    @Override
+    public boolean blockedByShield(DamageSource source) {
+        if (source == DamageManager.INSTANCE.getHYPERBEAM()) {
+            return this.isBlocking();
+        } else {
+            return super.blockedByShield(source);
         }
     }
 
