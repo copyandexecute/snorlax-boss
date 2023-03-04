@@ -3,25 +3,18 @@ package de.hglabor.snorlaxboss
 import com.mojang.brigadier.arguments.DoubleArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.context.CommandContext
-import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
+import de.hglabor.snorlaxboss.entity.EntityManager
+import de.hglabor.snorlaxboss.entity.EntityManager.SNORLAX
 import de.hglabor.snorlaxboss.entity.Snorlax
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
-import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
-import de.hglabor.snorlaxboss.extension.toId
-import de.hglabor.snorlaxboss.particle.ParticleManager
+import de.hglabor.snorlaxboss.item.ItemManager
+import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.particle.Attacks
-import de.hglabor.snorlaxboss.render.SnorlaxRenderer
+import de.hglabor.snorlaxboss.particle.ParticleManager
 import de.hglabor.snorlaxboss.sound.SoundManager
-import de.hglabor.snorlaxboss.utils.WeightedCollection
-import de.hglabor.snorlaxboss.utils.weightedCollection
 import net.fabricmc.api.ModInitializer
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
-import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
-import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
-import net.minecraft.entity.SpawnGroup
-import net.minecraft.registry.Registries
-import net.minecraft.registry.Registry
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Text
 import net.silkmc.silk.commands.command
@@ -29,24 +22,13 @@ import net.silkmc.silk.core.text.literal
 
 
 class SnorlaxBoss : ModInitializer {
-    companion object {
-        val SNORLAX = Registry.register(
-            Registries.ENTITY_TYPE,
-            "snorlax".toId(),
-            FabricEntityTypeBuilder
-                .create(SpawnGroup.CREATURE) { type, world -> Snorlax(type, world) }
-                .dimensions(Snorlax.STANDING_DIMENSIONS).build()
-        )
-    }
-
     override fun onInitialize() {
-        FabricDefaultAttributeRegistry.register(SNORLAX, Snorlax.createAttributes())
-        EntityRendererRegistry.register(SNORLAX) { SnorlaxRenderer(it) }
-
         ParticleManager.init()
         NetworkManager.init()
         ModifiedPlayerManager.init()
         SoundManager.init()
+        ItemManager.init()
+        EntityManager.init()
 
         fun CommandContext<ServerCommandSource>.getAllSnorlax(): MutableList<out Snorlax> {
             return this.source.world.getEntitiesByType(SNORLAX) { true }
