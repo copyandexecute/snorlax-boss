@@ -11,6 +11,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.minecraft.entity.data.TrackedDataHandler
 import net.minecraft.entity.data.TrackedDataHandlerRegistry
+import net.silkmc.silk.network.packet.ClientPacketContext
 import net.silkmc.silk.network.packet.ServerToClientPacketDefinition
 import net.silkmc.silk.network.packet.s2cPacket
 import java.util.UUID
@@ -21,6 +22,7 @@ object NetworkManager {
     val BOOM_SHAKE_PACKET: ServerToClientPacketDefinition<CameraShaker.BoomShake> = s2cPacket("boom_shake".toId())
     val SET_CUSTOM_HIT_BOX_PACKET = s2cPacket<CustomHitBox>("set_custom_hitbox".toId())
     val REMOVE_CUSTOM_HIT_BOX_PACKET = s2cPacket<UUIDWrapper>("remove_custom_hitbox".toId())
+    val FORCE_ANIMATION_RESET = s2cPacket<UUIDWrapper>("force_animation_reset".toId())
 
     fun init() {
         TrackedDataHandlerRegistry.register(ATTACK)
@@ -30,17 +32,22 @@ object NetworkManager {
         }
 
         SET_CUSTOM_HIT_BOX_PACKET.receiveOnClient { packet, context ->
-            val snorlax =
-                (context.client.world as? WorldAccessor)?.invokeGetEntityLookup()?.get(packet.entityId) as? Snorlax?
-                    ?: return@receiveOnClient
+            val snorlax = context.snorlax(packet.entityId) ?: return@receiveOnClient
 
             snorlax.customHitBox = packet.dimension
         }
 
         REMOVE_CUSTOM_HIT_BOX_PACKET.receiveOnClient { packet, context ->
-            val snorlax = (context.client.world as? WorldAccessor)?.invokeGetEntityLookup()?.get(packet.uuid) as? Snorlax?
-                ?: return@receiveOnClient
+            val snorlax = context.snorlax(packet.uuid) ?: return@receiveOnClient
             snorlax.customHitBox = null
         }
+
+        FORCE_ANIMATION_RESET.receiveOnClient { packet, context ->
+            val snorlax = context.snorlax(packet.uuid) ?: return@receiveOnClient
+            snorlax.forceAnimationReset = true
+        }
     }
+
+    private fun ClientPacketContext.snorlax(uuid: UUID): Snorlax? =
+        (this.client.world as? WorldAccessor)?.invokeGetEntityLookup()?.get(uuid) as? Snorlax?
 }

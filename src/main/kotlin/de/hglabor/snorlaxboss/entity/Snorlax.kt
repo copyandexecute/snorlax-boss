@@ -64,6 +64,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     GeoEntity {
     private val factory = GeckoLibUtil.createInstanceCache(this)
     private val bossBar = ServerBossBar(literalText("Snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
+    private val HIT_DISTANCE = 6.0f
+    private val RUN_DISTANCE = 3.5f
+
+    var forceAnimationReset = false
+
     private var isDebug: Boolean
         get() = this.dataTracker.get(IS_DEBUG)
         set(value) = this.dataTracker.set(IS_DEBUG, value)
@@ -74,9 +79,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         get() = this.dataTracker.get(ATTACK)
         set(value) {
             this.dataTracker.set(ATTACK, value)
-            task?.onDisable()
-            task = value.supplier.invoke(this)
-            task?.onEnable()
+            if (!this.world.isClient()) {
+                task?.onDisable()
+                task = value.supplier.invoke(this)
+                task?.onEnable()
+            }
         }
 
     init {
@@ -90,7 +97,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         IDLE("idle".play(), Snorlax::IdleTargetTask),
         BEAM("beam".play(), Snorlax::BeamTask),
         CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
-        PUNCH("punch".play(), Snorlax::PunchTargetTask),
+        PUNCH("punch".hold(), Snorlax::PunchTargetTask),
         RUN("run".loop(), Snorlax::RunToTargetTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         SLEEP(
@@ -105,8 +112,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         fun createAttributes(): DefaultAttributeContainer.Builder {
             return MobEntity.createLivingAttributes().add(EntityAttributes.GENERIC_FOLLOW_RANGE, 35.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.23000000417232513)
-                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0)
-                .add(EntityAttributes.GENERIC_MAX_HEALTH, 300.0)
+                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 15.0)
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 400.0)
                 .add(EntityAttributes.GENERIC_ARMOR, 4.0)
                 .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, KNOCKBACK_RESISTANCE_BASE)
                 .add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5)
@@ -120,9 +127,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             Attack.SLEEP to SLEEPING_DIMENSIONS
         )
 
-        private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, NetworkManager.ATTACK)
-        private val IS_DEBUG: TrackedData<Boolean> =
-            DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val ATTACK = DataTracker.registerData(Snorlax::class.java, NetworkManager.ATTACK)
+        private val IS_DEBUG = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
 
 
@@ -242,9 +248,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
                 if (isGrounded) {
-                    mcCoroutineTask(delay = 2.seconds) { isFinished = isOnGround }
+                    mcCoroutineTask(delay = 2.seconds) { isFinished = true }
                     val radius = Random.nextInt(12, 30)
                     sound(SoundManager.LANDING, 0.2f + radius / 30f, 1f)
+
                     Attacks.radialWave(this@Snorlax, radius)
                     this.cancel()
                 }
@@ -269,7 +276,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 if (target == null) {
                     isFinished = true
                 } else {
-                    if (pos.distanceTo(target!!.pos) >= 4f) {
+                    if (pos.distanceTo(target!!.pos) >= RUN_DISTANCE) {
                         if (navigation.isIdle) {
                             navigation.startMovingTo(target, 2.0)
                         }
@@ -427,9 +434,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return weightedCollection {
                 if (target != null) {
                     75.0 to Attack.PUNCH
-                    25.0 to Attack.JUMP
+                    20.0 to Attack.JUMP
+                    5.0 to Attack.SHAKING
                 } else {
-
+                    100.0 to Attack.CHECK_TARGET
                 }
             }.next()
         }
@@ -437,13 +445,28 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class PunchTargetTask : Task("Punch") {
         private val radius = 15.0
+        private var distanceFlag = false
         override fun onEnable() {
+            NetworkManager.FORCE_ANIMATION_RESET.sendToAll(UUIDWrapper(uuid))
+
             mcCoroutineTask(delay = 5.ticks) {
-                world.getOtherEntities(this@Snorlax, Box.of(pos, radius, radius, radius)).filter(::canSee)
-                    .filterIsInstance<LivingEntity>().forEach(::attack)
-            }
-            mcCoroutineTask(delay = 20.ticks) {
-                isFinished = true
+                val hitRadius = Box.of(pos, radius, radius, radius)
+                if (target == null) {
+                    isFinished = true
+                } else {
+                    if (distanceTo(target) > HIT_DISTANCE) {
+                        isFinished = true
+                        distanceFlag = true
+                    } else {
+                        val toHit = world.getOtherEntities(this@Snorlax, hitRadius)
+                            .filter(::canSee)
+                            .filterIsInstance<LivingEntity>()
+                            .toMutableList()
+                        toHit.add(target!!)
+                        toHit.forEach(::attack)
+                        mcCoroutineTask(delay = 20.ticks) { isFinished = true }
+                    }
+                }
             }
         }
 
@@ -451,9 +474,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             this@Snorlax.tryAttack(entity)
             val player = entity as? PlayerEntity ?: return
             when (weightedCollection {
-                33.3 to "ICE"
-                33.3 to "SHIELD"
-                33.3 to "FIRE"
+                80.0 to "SHIELD"
+                10.0 to "ICE"
+                10.0 to "FIRE"
             }.next()) {
                 "SHIELD" -> shieldBreaker(player)
                 "ICE" -> icePunch(player)
@@ -462,27 +485,38 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         private fun firePunch(player: PlayerEntity) {
-            player.setOnFireFor(Random.nextInt(3, 7))
+            if (!player.isOnFire) {
+                player.setOnFireFor(Random.nextInt(3, 7))
+            }
         }
 
         private fun icePunch(player: PlayerEntity) {
-            player.frozenTicks = Random.nextInt(3, 7) * 20
+            if (!player.isFrozen) {
+                player.frozenTicks = Random.nextInt(3, 7) * 20
+            }
         }
 
         private fun shieldBreaker(player: PlayerEntity) {
             val item = if (player.isUsingItem) player.activeItem else ItemStack.EMPTY
             if (item.isOf(Items.SHIELD)) {
                 player.itemCooldownManager.set(Items.SHIELD, 100)
+                player.clearActiveItem()
                 world.sendEntityStatus(player, EntityStatuses.BREAK_SHIELD)
             }
         }
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                17.0 to Attack.JUMP
-                40.0 to Attack.BELLY_FLOP
-                40.0 to Attack.RUN
-                3.0 to Attack.BEAM
+                if (distanceFlag) {
+                    90.0 to Attack.RUN
+                    10.0 to Attack.BELLY_FLOP
+                } else {
+                    60.0 to Attack.PUNCH
+                    27.0 to Attack.RUN
+                    5.0 to Attack.BELLY_FLOP
+                    5.0 to Attack.JUMP
+                    1.0 to Attack.BEAM
+                }
             }.next()
         }
     }
@@ -490,6 +524,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     inner class BeamTask : Task("Beam") {
         private val prepareTime = 3.seconds
         private var isPreparing = true
+
         override fun onEnable() {
             lookAtEntity(target, 90f, 90f)
 
@@ -554,7 +589,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     val isGrounded = isOnGround
 
                     if (isGrounded) {
-                        mcCoroutineTask(delay = 1.seconds) { isFinished = isOnGround }
+                        mcCoroutineTask(delay = 1.seconds) { isFinished = true }
                         world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
                             .forEach { player ->
                                 world.playSound(
@@ -605,6 +640,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     override fun registerControllers(controller: AnimatableManager.ControllerRegistrar) {
         controller.add(AnimationController(this, "controller", 0) {
+
+            if (forceAnimationReset) {
+                println("Animation Reset")
+                it.controller.forceAnimationReset()
+                forceAnimationReset = false
+            }
+
             it.controller.setAnimation(attack.animation)
             return@AnimationController PlayState.CONTINUE
         }.setParticleKeyframeHandler { })

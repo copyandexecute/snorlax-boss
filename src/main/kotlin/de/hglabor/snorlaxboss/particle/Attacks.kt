@@ -118,7 +118,7 @@ object Attacks {
             positions.forEachIndexed { index, vec3d ->
                 mcCoroutineTask(delay = index.ticks) {
                     world
-                        .getOtherEntities(null /* livingEntity */, Box.from(vec3d).expand(1.5))
+                        .getOtherEntities(livingEntity, Box.from(vec3d).expand(1.5))
                         .filterIsInstance<LivingEntity>().forEach {
                             it.damage(DamageManager.HYPERBEAM, 4f)
                         }
