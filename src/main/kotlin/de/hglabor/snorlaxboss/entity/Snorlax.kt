@@ -26,11 +26,13 @@ import net.minecraft.entity.boss.ServerBossBar
 import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.data.DataTracker
 import net.minecraft.entity.data.TrackedData
+import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.world.ServerWorld
@@ -50,7 +52,9 @@ import net.silkmc.silk.core.text.literalText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager
+import software.bernie.geckolib.core.animation.Animation
 import software.bernie.geckolib.core.animation.AnimationController
+import software.bernie.geckolib.core.animation.AnimationController.ParticleKeyframeHandler
 import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
@@ -73,7 +77,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         PUNCH("punch".play(), Snorlax::PunchTargetTask),
         RUN("run".loop(), Snorlax::RunToTargetTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
-        SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepingTask),
+        SLEEP(
+            RawAnimation.begin()
+                .then("animation.hglabor.sleep", Animation.LoopType.PLAY_ONCE)
+                .thenLoop("animation.hglabor.sleep-idle"), Snorlax::SleepingTask
+        ),
         JUMP("jump".hold(), Snorlax::JumpTask);
     }
 
@@ -97,13 +105,17 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         )
 
         private val ATTACK: TrackedData<Attack> = DataTracker.registerData(Snorlax::class.java, NetworkManager.ATTACK)
+        private val IS_DEBUG: TrackedData<Boolean> =
+            DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
 
 
     override fun tick() {
         super.tick()
-        if (!isAiDisabled) {
-            if (task?.isFinished == true) {
+        if (task?.isFinished == true) {
+            if (isDebug) {
+                task?.onDisable()
+            } else {
                 attack = task!!.nextTask()
             }
         }
@@ -114,6 +126,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         bossBar.percent = this.health / this.maxHealth
     }
 
+    private var isDebug: Boolean
+        get() = this.dataTracker.get(IS_DEBUG)
+        set(value) = this.dataTracker.set(IS_DEBUG, value)
+
     var customHitBox: EntityDimensions? = null
     var task: Task? = null
     var attack: Attack
@@ -121,15 +137,26 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         set(value) {
             this.dataTracker.set(ATTACK, value)
             task?.onDisable()
-            world.server?.broadcastText("Disabling ${task?.name}")
             task = value.supplier.invoke(this)
             task?.onEnable()
-            world.server?.broadcastText("Enabling ${task?.name}")
         }
 
     override fun initDataTracker() {
         super.initDataTracker()
         dataTracker.startTracking(ATTACK, Attack.IDLE)
+        dataTracker.startTracking(IS_DEBUG, false)
+    }
+
+    override fun readCustomDataFromNbt(nbt: NbtCompound) {
+        super.readCustomDataFromNbt(nbt)
+        this.isDebug = nbt.getBoolean("Debug")
+    }
+
+    override fun writeCustomDataToNbt(nbt: NbtCompound) {
+        super.writeCustomDataToNbt(nbt)
+        if (this.isDebug) {
+            nbt.putBoolean("Debug", this.isDebug)
+        }
     }
 
     override fun onTrackedDataSet(data: TrackedData<*>?) {
@@ -189,7 +216,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     inner class SleepingTask : Task("Sleep") {
         override fun onEnable() {
             EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE.instance?.baseValue = KNOCKBACK_RESISTANCE_BASE.times(2)
-            sound(SoundManager.SLEEPING, 0.4f, 1f)
+            sound(SoundManager.SLEEPING, 0.14f, 1f)
             Attacks.sleeping(this@Snorlax, 7)
             mcCoroutineTask(delay = 7.seconds) { isFinished = true }
         }
@@ -516,7 +543,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 val direction = to.subtract(from)
                 modifyVelocity(direction.normalize().multiply(1.2, 0.0, 1.2))
                 modifyVelocity(0, Random.nextDouble(1.0, 1.5), 0)
-                sound(SoundManager.JUMP, 1f, 1f)
+                sound(SoundManager.JUMP, 0.4f, 1f)
 
                 mcCoroutineTask(delay = 560.milliseconds) {
                     NetworkManager.SET_CUSTOM_HIT_BOX_PACKET.sendToAll(CustomHitBox(uuid, SLEEPING_DIMENSIONS))
@@ -579,7 +606,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         controller.add(AnimationController(this, "controller", 0) {
             it.controller.setAnimation(attack.animation)
             return@AnimationController PlayState.CONTINUE
-        })
+        }.setParticleKeyframeHandler { })
     }
 
     override fun getAnimatableInstanceCache(): AnimatableInstanceCache = factory
