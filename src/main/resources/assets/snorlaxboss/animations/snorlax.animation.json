@@ -330,7 +330,7 @@
 			"bones": {
 				"body": {
 					"rotation": {
-						"vector": [1, 0, 0]
+						"vector": [-90, 0, 0]
 					}
 				},
 				"torso": {

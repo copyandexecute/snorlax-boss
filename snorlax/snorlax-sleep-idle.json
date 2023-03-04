@@ -7,9 +7,7 @@
 			"bones": {
 				"body": {
 					"rotation": {
-						"vector": [-90, 0, 0],
-						"easing": "easeOutElastic",
-						"easingArgs": [1]
+						"vector": [-90, 0, 0]
 					}
 				},
 				"torso": {
