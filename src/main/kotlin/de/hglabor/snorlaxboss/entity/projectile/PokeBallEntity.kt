@@ -16,8 +16,8 @@ import net.minecraft.world.World
 
 class PokeBallEntity : ThrownItemEntity {
     constructor(entityType: EntityType<out PokeBallEntity?>?, world: World?) : super(entityType, world)
-    constructor(world: World?, owner: LivingEntity?) : super(EntityType.EGG, owner, world)
-    constructor(world: World?, x: Double, y: Double, z: Double) : super(EntityType.EGG, x, y, z, world)
+    constructor(world: World?, owner: LivingEntity?) : super(EntityManager.POKEBALL, owner, world)
+    constructor(world: World?, x: Double, y: Double, z: Double) : super(EntityManager.POKEBALL, x, y, z, world)
 
     override fun handleStatus(status: Byte) {
         if (status == EntityStatuses.PLAY_DEATH_SOUND_OR_ADD_PROJECTILE_HIT_PARTICLES) {
