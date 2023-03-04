@@ -1,6 +1,5 @@
 package de.hglabor.snorlaxboss.command
 
-import com.mojang.brigadier.arguments.DoubleArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.context.CommandContext
 import de.hglabor.snorlaxboss.SnorlaxBoss.Companion.IS_DEVELOPMENT
@@ -9,7 +8,10 @@ import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.particle.Attacks
+import net.minecraft.particle.ParticleEffect
+import net.minecraft.registry.Registries
 import net.minecraft.server.command.ServerCommandSource
+import net.minecraft.util.Identifier
 import net.silkmc.silk.commands.command
 
 object CommandManager {
@@ -45,16 +47,6 @@ object CommandManager {
                 }
             }
 
-            command("beam") {
-                argument<Double>("radius", DoubleArgumentType.doubleArg(0.0)) { radius ->
-                    argument<Int>("length", IntegerArgumentType.integer(1)) { length ->
-                        runs {
-                            Attacks.beam(this.source.playerOrThrow, radius(), length())
-                        }
-                    }
-                }
-            }
-
             command("flat") {
                 runs {
                     val player = this.source.playerOrThrow as ModifiedPlayer
@@ -62,7 +54,17 @@ object CommandManager {
                 }
             }
 
-            command("beam2") {
+            command("beam") {
+                argument<String>("particle") { particle ->
+                    suggestList { Registries.PARTICLE_TYPE.ids.map { it.path } }
+                    runs {
+                        val identifier = Identifier("minecraft", particle())
+                        Attacks.hyperBeam(
+                            this.source.playerOrThrow,
+                            Registries.PARTICLE_TYPE.get(identifier) as ParticleEffect
+                        )
+                    }
+                }
                 runs {
                     Attacks.hyperBeam(this.source.playerOrThrow)
                 }

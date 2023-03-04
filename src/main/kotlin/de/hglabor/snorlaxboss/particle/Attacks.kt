@@ -60,7 +60,7 @@ object Attacks {
                         Entity::class.java, Box.of(block.pos, hitRadius, hitRadius, hitRadius)
                     ) { entity -> return@getEntitiesByClass entity.isOnGround })
                 }
-                affectedEntities.removeIf { it is Snorlax }
+                affectedEntities.removeIf { it is Snorlax || it == entity }
                 affectedEntities.forEach {
                     it.modifyVelocity(0, 1, 0)
                 }
