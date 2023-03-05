@@ -1,6 +1,5 @@
 package de.hglabor.snorlaxboss.particle
 
-import de.hglabor.snorlaxboss.entity.ILivingEntity
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.damage.DamageManager
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
@@ -11,10 +10,8 @@ import net.minecraft.block.Blocks
 import net.minecraft.entity.Entity
 import net.minecraft.entity.FallingBlockEntity
 import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.effect.StatusEffectInstance
 import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.particle.DustParticleEffect
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.server.network.ServerPlayerEntity
@@ -39,7 +36,7 @@ object Attacks {
     fun radialWave(entity: LivingEntity, radius: Int) {
         val vec3i = Vec3i(entity.blockX, entity.blockY - 1, entity.blockZ)
         val world = entity.world
-        val hitRadius = 4.0
+        val hitRadius = 6.0
 
         world.getOtherEntities(entity, Box.from(entity.pos).expand(radius * 2.0)).filterIsInstance<ServerPlayerEntity>()
             .forEach {
@@ -66,9 +63,9 @@ object Attacks {
                         Entity::class.java, Box.of(block.pos, hitRadius, hitRadius, hitRadius)
                     ) { entity -> return@getEntitiesByClass entity.isOnGround })
                 }
-                affectedEntities.removeIf { it is Snorlax || it == entity }
+                affectedEntities.removeIf { it is Snorlax }
                 affectedEntities.forEach {
-                    it.modifyVelocity(0, 1, 0)
+                    it.modifyVelocity(0, 1 + (radius / 10), 0)
                 }
             }
         }
@@ -97,9 +94,9 @@ object Attacks {
             }
 
             if (withFire) {
-                Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(2).forEach { pos ->
+                Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(2).forEach { firePos ->
                     Direction.values().forEach { direction ->
-                        val offset = pos.offset(direction)
+                        val offset = firePos.offset(direction)
                         if (AbstractFireBlock.canPlaceAt(world, offset, direction)) {
                             val blockState2 = AbstractFireBlock.getState(world, offset)
                             if (Random.nextBoolean()) {
@@ -142,7 +139,7 @@ object Attacks {
         )
         livingEntity.addStatusEffect(
             StatusEffectInstance(
-                StatusEffects.RESISTANCE, (durationInSeconds * 20).toInt(), 4, false, false
+                StatusEffects.RESISTANCE, (durationInSeconds * 20).toInt(), 1, false, false
             )
         )
 

@@ -8,11 +8,16 @@ import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.particle.Attacks
+import net.minecraft.enchantment.Enchantments
+import net.minecraft.entity.EquipmentSlot
+import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.item.Items
 import net.minecraft.particle.ParticleEffect
 import net.minecraft.registry.Registries
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.util.Identifier
 import net.silkmc.silk.commands.command
+import net.silkmc.silk.core.item.itemStack
 
 object CommandManager {
     fun init() {
@@ -54,6 +59,12 @@ object CommandManager {
                 }
             }
 
+            command("equip") {
+                runs {
+                    this.source.playerOrThrow.bossEquip()
+                }
+            }
+
             command("beam") {
                 argument<String>("particle") { particle ->
                     suggestList { Registries.PARTICLE_TYPE.ids.map { it.path } }
@@ -70,5 +81,44 @@ object CommandManager {
                 }
             }
         }
+    }
+
+    private fun PlayerEntity.bossEquip() {
+        inventory.clear()
+        equipStack(EquipmentSlot.HEAD, itemStack(Items.NETHERITE_HELMET) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        equipStack(EquipmentSlot.CHEST, itemStack(Items.NETHERITE_CHESTPLATE) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        equipStack(EquipmentSlot.LEGS, itemStack(Items.NETHERITE_LEGGINGS) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        equipStack(EquipmentSlot.FEET, itemStack(Items.NETHERITE_BOOTS) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+            addEnchantment(Enchantments.FEATHER_FALLING, 4)
+        })
+        equipStack(EquipmentSlot.MAINHAND, itemStack(Items.NETHERITE_SWORD) {
+            addEnchantment(Enchantments.SHARPNESS, 5)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        equipStack(EquipmentSlot.OFFHAND, itemStack(Items.SHIELD) {
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        giveItemStack(itemStack(Items.BOW) {
+            addEnchantment(Enchantments.POWER, 5)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+            addEnchantment(Enchantments.PUNCH, 2)
+            addEnchantment(Enchantments.INFINITY, 1)
+        })
+        giveItemStack(itemStack(Items.COOKED_BEEF) {
+            count = 64
+        })
+        giveItemStack(itemStack(Items.WATER_BUCKET) {})
+        giveItemStack(itemStack(Items.ARROW) {})
     }
 }

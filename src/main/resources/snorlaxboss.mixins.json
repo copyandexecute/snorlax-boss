@@ -9,6 +9,7 @@
     "entity.player.PlayerEntityMixin"
   ],
   "client": [
+    "gui.hud.InGameOverlayRendererMixin",
     "option.KeyBindingMixin",
     "render.CameraMixin",
     "render.GameRendererMixin",
