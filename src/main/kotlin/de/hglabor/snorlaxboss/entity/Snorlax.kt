@@ -65,7 +65,8 @@ import kotlin.time.Duration.Companion.seconds
 class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathAwareEntity(entityType, world),
     GeoEntity {
     private val factory = GeckoLibUtil.createInstanceCache(this)
-    private val bossBar = ServerBossBar(Text.translatable("entity.snorlaxboss.snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
+    private val bossBar =
+        ServerBossBar(Text.translatable("entity.snorlaxboss.snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
     private val HIT_DISTANCE = 6.0f
     private val RUN_DISTANCE = 3.5f
 
@@ -85,11 +86,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 task?.onDisable()
                 task = value.supplier.invoke(this)
                 task?.onEnable()
-                world.server?.broadcastText {
+                /*world.server?.broadcastText {
                     text(task?.name!!) {
                         color = 0x5eff00
                     }
-                }
+                }*/
             }
         }
 
@@ -318,8 +319,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                95.0 to Attack.RUN
-                5.0 to Attack.SLEEP
+                90.0 to Attack.RUN
+                10.0 to Attack.SLEEP
             }.next()
         }
     }
@@ -400,8 +401,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 if (target == null) {
                     100.0 to Attack.IDLE
                 } else {
-                    90.0 to Attack.RUN
-                    10.0 to Attack.BEAM
+                    70.0 to Attack.RUN
+                    if (health <= maxHealth / 2) {
+                        30.0 to Attack.SLEEP
+                    } else {
+                        10.0 to Attack.SLEEP
+                    }
+                    20.0 to Attack.BEAM
                 }
             }.next()
         }
@@ -451,7 +457,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 mcCoroutineTask(delay = 13.ticks) {
                     modifiedPlayer?.setShaky(true)
                     sound(SoundManager.SHAKING, 1f, 1f)
-                    tryAttack(target)
 
                     jobs += infiniteMcCoroutineTask(period = 1.ticks) {
                         (player as? ServerPlayerEntity?)?.apply {
@@ -460,6 +465,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     }
 
                     jobs += infiniteMcCoroutineTask(period = 7.ticks) {
+                        tryAttack(target)
                         repeat(Random.nextInt(1, 3)) {
                             val (item, slot) = player?.randomMainInvItem ?: return@repeat
                             mcCoroutineTask(delay = it.ticks) {
@@ -535,11 +541,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                25.0 to Attack.SHAKING
-                25.0 to Attack.JUMP
+                20.0 to Attack.SHAKING
+                30.0 to Attack.JUMP
                 25.0 to Attack.BELLY_FLOP
-                20.0 to Attack.SLEEP
-                5.0 to Attack.BEAM
+                if (health <= maxHealth /2) {
+                    40.0 to Attack.SLEEP
+                } else {
+                    20.0 to Attack.SLEEP
+                }
+                7.0 to Attack.BEAM
             }.next()
         }
     }
@@ -579,11 +589,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     90.0 to Attack.RUN
                     10.0 to Attack.BELLY_FLOP
                 } else {
-                    60.0 to Attack.PUNCH
-                    27.0 to Attack.RUN
-                    5.0 to Attack.BELLY_FLOP
-                    5.0 to Attack.JUMP
-                    1.0 to Attack.BEAM
+                    40.0 to Attack.PUNCH
+                    20.0 to Attack.RUN
+                    10.0 to Attack.BELLY_FLOP
+                    10.0 to Attack.JUMP
+                    10.0 to Attack.SLEEP
+                    5.0 to Attack.BEAM
                 }
             }.next()
         }

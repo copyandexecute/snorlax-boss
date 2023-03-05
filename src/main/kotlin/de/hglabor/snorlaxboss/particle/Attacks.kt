@@ -36,7 +36,7 @@ object Attacks {
     fun radialWave(entity: LivingEntity, radius: Int) {
         val vec3i = Vec3i(entity.blockX, entity.blockY - 1, entity.blockZ)
         val world = entity.world
-        val hitRadius = 6.0
+        val hitRadius = 7.0
 
         world.getOtherEntities(entity, Box.from(entity.pos).expand(radius * 2.0)).filterIsInstance<ServerPlayerEntity>()
             .forEach {

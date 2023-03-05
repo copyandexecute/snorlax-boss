@@ -13,11 +13,13 @@ import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.Items
 import net.minecraft.particle.ParticleEffect
+import net.minecraft.potion.Potions
 import net.minecraft.registry.Registries
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.util.Identifier
 import net.silkmc.silk.commands.command
 import net.silkmc.silk.core.item.itemStack
+import net.silkmc.silk.core.item.setPotion
 
 object CommandManager {
     fun init() {
@@ -118,7 +120,64 @@ object CommandManager {
         giveItemStack(itemStack(Items.COOKED_BEEF) {
             count = 64
         })
-        giveItemStack(itemStack(Items.WATER_BUCKET) {})
+        inventory.setStack(8, itemStack(Items.WATER_BUCKET) {})
+        inventory.setStack(7, itemStack(Items.ENDER_PEARL) {
+            count = 16
+        })
+        giveItemStack(itemStack(Items.OAK_PLANKS) {
+            count = 64
+        })
+        giveItemStack(itemStack(Items.GOLDEN_APPLE) {
+            count = 47
+        })
+        giveItemStack(itemStack(Items.ENCHANTED_GOLDEN_APPLE) {
+            count = 2
+        })
+        giveItemStack(itemStack(Items.SHIELD) {
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
         giveItemStack(itemStack(Items.ARROW) {})
+        giveItemStack(itemStack(Items.WATER_BUCKET) {})
+
+        giveItemStack(itemStack(Items.NETHERITE_HELMET) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        giveItemStack(itemStack(Items.NETHERITE_CHESTPLATE) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        giveItemStack(itemStack(Items.NETHERITE_LEGGINGS) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+        giveItemStack(itemStack(Items.NETHERITE_BOOTS) {
+            addEnchantment(Enchantments.PROTECTION, 4)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+            addEnchantment(Enchantments.FEATHER_FALLING, 4)
+        })
+        giveItemStack(itemStack(Items.NETHERITE_SWORD) {
+            addEnchantment(Enchantments.SHARPNESS, 5)
+            addEnchantment(Enchantments.UNBREAKING, 3)
+        })
+
+        repeat(10) {
+            giveItemStack(itemStack(Items.SPLASH_POTION) {
+                setPotion(Potions.STRONG_HEALING)
+            })
+        }
+        repeat(2) {
+            giveItemStack(itemStack(Items.POTION) {
+                setPotion(Potions.STRONG_REGENERATION)
+            })
+        }
+        repeat(3) {
+            giveItemStack(itemStack(Items.POTION) {
+                setPotion(Potions.STRONG_SWIFTNESS)
+            })
+        }
+        repeat(3) {
+            giveItemStack(itemStack(Items.TOTEM_OF_UNDYING) {})
+        }
     }
 }
