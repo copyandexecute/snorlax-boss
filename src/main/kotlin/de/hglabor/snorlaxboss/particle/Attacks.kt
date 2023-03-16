@@ -130,6 +130,53 @@ object Attacks {
         mcCoroutineTask(delay = duration) { job.cancel() }
     }
 
+    fun inhale(
+        livingEntity: LivingEntity,
+        particle: ParticleEffect = ParticleTypes.CLOUD,
+        duration: Duration = 5.seconds,
+        target: LivingEntity
+    ) {
+        var eyePos = livingEntity.eyePos
+        val dir = livingEntity.directionVector.normalize().multiply(1.0)
+        val world = livingEntity.world as ServerWorld
+        val positions = mutableSetOf<Vec3d>()
+
+        fun ParticleEffect.spawn(pos: Vec3d) {
+            world.spawnParticles(
+                this, pos.x, pos.y, pos.z, 1, (1 / 4.0f).toDouble(), (1 / 4.0f).toDouble(), (1 / 4.0f).toDouble(), 0.0
+            )
+
+            Vec3i(pos.x, pos.y, pos.z).filledSpherePositionSet(3).forEach {
+                if (!world.getBlockState(it).exceedsCube()) {
+                    val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, it, world.getBlockState(it))
+
+                    fallingBlockEntity.modifyVelocity(0, 0.5, 0)
+
+                    fallingBlockEntity.dropItem = false
+                    fallingBlockEntity.setHurtEntities(1F, 5)
+                }
+            }
+        }
+
+        val job = infiniteMcCoroutineTask(period = 1.ticks) {
+            particle.spawn(eyePos)
+
+            if(target != livingEntity) {
+                val distance = livingEntity.pos.distanceTo(target.pos)
+                if(distance > 4) {
+                    val direction = livingEntity.pos.subtract(target.pos)
+                    target.modifyVelocity(direction.normalize().multiply(1.0))
+                }
+
+            }
+
+            eyePos = eyePos.add(dir)
+            positions += eyePos
+        }
+
+        mcCoroutineTask(delay = duration) { job.cancel() }
+    }
+
     fun sleeping(livingEntity: LivingEntity, durationInSeconds: Long) {
         val world = livingEntity.world as ServerWorld
         livingEntity.addStatusEffect(

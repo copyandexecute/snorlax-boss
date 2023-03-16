@@ -48,8 +48,6 @@ import net.silkmc.silk.core.entity.modifyVelocity
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
-import net.silkmc.silk.core.text.broadcastText
-import net.silkmc.silk.core.text.literalText
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager
@@ -114,7 +112,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 .then("animation.hglabor.sleep", Animation.LoopType.PLAY_ONCE)
                 .thenLoop("animation.hglabor.sleep-idle"), Snorlax::SleepTask
         ),
-        JUMP("jump".hold(), Snorlax::JumpTask);
+        JUMP("jump".hold(), Snorlax::JumpTask),
+        INHALE("inhale".play(), Snorlax::InhaleTask);
+
     }
 
     companion object {
@@ -330,9 +330,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     inner class RunTask : Task("Run") {
+
+        var time = 0
+
         override fun onEnable() {
             jobs += infiniteMcCoroutineTask {
-                if (target == null) {
+                time++
+                if(time >= 200) {
+                    isFinished = true
+                } else if (target == null) {
                     isFinished = true
                 } else {
                     if (pos.distanceTo(target!!.pos) >= RUN_DISTANCE) {
@@ -352,6 +358,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Attack {
+            if(time >= 200)
+                return Attack.INHALE
             return weightedCollection {
                 if (target == null) {
                     100.0 to Attack.CHECK_TARGET
@@ -645,6 +653,57 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 48.0 to Attack.RUN
                 4.0 to Attack.SLEEP
             }.next()
+        }
+    }
+    inner class InhaleTask : Task("Inhale") {
+        private val prepareTime = 1.seconds
+        private var isPreparing = true
+
+        override fun onEnable() {
+            lookAtEntity(target, 90f, 90f)
+
+            sound(SoundManager.INHALE, 5f, 1f)
+
+            jobs += infiniteMcCoroutineTask {
+                if (isPreparing) {
+                    lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                    val pos = eyePos.add(directionVector.normalize().multiply(3.0))
+
+                    (world as? ServerWorld?)?.spawnParticles(
+                        ParticleTypes.CLOUD,
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                        1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
+                }
+            }
+
+            mcCoroutineTask(delay = prepareTime) {
+                isPreparing = false
+                lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                Attacks.inhale(this@Snorlax, target = target!!)
+            }
+
+            mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
+                isFinished = true
+            }
+        }
+
+        override fun nextTask(): Attack {
+            // Er muss schlafen, weil seine ganze Luft raus ist und keine Energie mehr hat
+            return Attack.SLEEP
+            /*
+            return weightedCollection {
+                48.0 to Attack.CHECK_TARGET
+                48.0 to Attack.RUN
+                4.0 to Attack.SLEEP
+            }.next()
+            */
         }
     }
 

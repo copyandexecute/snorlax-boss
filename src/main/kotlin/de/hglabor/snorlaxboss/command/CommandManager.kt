@@ -82,6 +82,22 @@ object CommandManager {
                     Attacks.hyperBeam(this.source.playerOrThrow)
                 }
             }
+            command("inhale") {
+                argument<String>("particle") { particle ->
+                    suggestList { Registries.PARTICLE_TYPE.ids.map { it.path } }
+                    runs {
+                        val identifier = Identifier("minecraft", particle())
+                        Attacks.inhale(
+                            this.source.playerOrThrow,
+                            Registries.PARTICLE_TYPE.get(identifier) as ParticleEffect,
+                            target = source.playerOrThrow
+                        )
+                    }
+                }
+                runs {
+                    Attacks.inhale(this.source.playerOrThrow, target = source.playerOrThrow)
+                }
+            }
         }
     }
 
