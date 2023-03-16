@@ -1,2 +1,4 @@
-## What does this fork change?
-- It adds an "inhale" to the snorlax boss which should fix bow / cobweb spamming 
+### TODO
+- Ausrufezeichen Particle bei Check-Target Task
+- Attacken miteinander verbinden
+- Soundeffekte
