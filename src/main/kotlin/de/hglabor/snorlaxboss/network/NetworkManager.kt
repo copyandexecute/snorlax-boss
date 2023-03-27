@@ -5,16 +5,14 @@ import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.mixin.accessor.WorldAccessor
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import de.hglabor.snorlaxboss.utils.CustomHitBox
-import de.hglabor.snorlaxboss.utils.UUIDSerializer
 import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
 import net.minecraft.entity.data.TrackedDataHandler
 import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.silkmc.silk.network.packet.ClientPacketContext
 import net.silkmc.silk.network.packet.ServerToClientPacketDefinition
 import net.silkmc.silk.network.packet.s2cPacket
-import java.util.UUID
+import java.util.*
 
 @OptIn(ExperimentalSerializationApi::class)
 object NetworkManager {

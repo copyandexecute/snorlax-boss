@@ -6,7 +6,8 @@
   "mixins": [
     "accessor.WorldAccessor",
     "entity.LivingEntityMixin",
-    "entity.player.PlayerEntityMixin"
+    "entity.player.PlayerEntityMixin",
+    "network.ServerPlayNetworkHandlerMixin"
   ],
   "client": [
     "gui.hud.InGameOverlayRendererMixin",

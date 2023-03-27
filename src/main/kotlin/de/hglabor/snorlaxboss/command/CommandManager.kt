@@ -58,6 +58,9 @@ object CommandManager {
                 runs {
                     val player = this.source.playerOrThrow as ModifiedPlayer
                     player.setFlat(!player.isFlat())
+                    if (player.isFlat()) {
+                        player.setFlatJumps(0)
+                    }
                 }
             }
 

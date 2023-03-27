@@ -5,4 +5,6 @@ interface ModifiedPlayer {
     fun setFlat(flag: Boolean)
     fun setShaky(flag: Boolean)
     fun isShaky(): Boolean
+    fun setFlatJumps(amount: Int)
+    fun getFlatJumps(): Int
 }

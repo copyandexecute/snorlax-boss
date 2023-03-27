@@ -59,6 +59,7 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -677,17 +678,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                                     SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT,
                                     SoundCategory.PLAYERS
                                 )
-                                (player as ModifiedPlayer).setFlat(true)
+                                tryFlatPlayer(player)
                                 tryAttackWithShieldBreak(player)
-                                mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
-                                    (player as ModifiedPlayer).setFlat(false)
-                                    world.playSound(
-                                        null,
-                                        player.blockPos,
-                                        SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP,
-                                        SoundCategory.PLAYERS
-                                    )
-                                }
                             }
                         this.cancel()
                     }
@@ -706,6 +698,25 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 18.0 to Attack.CHECK_TARGET
                 2.0 to Attack.SLEEP
             }.next()
+        }
+    }
+
+    private fun tryFlatPlayer(player: PlayerEntity) {
+        val modifiedPlayer = player as ModifiedPlayer
+        if (!player.isFlat()) {
+            player.setFlat(true)
+            player.setFlatJumps(0)
+            mcCoroutineTask(delay = Random.nextInt(10, 15).seconds) {
+                if (player.isFlat()) {
+                    player.setFlat(false)
+                    world.playSound(
+                        null,
+                        player.blockPos,
+                        SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP,
+                        SoundCategory.PLAYERS
+                    )
+                }
+            }
         }
     }
 
