@@ -22,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class PlayerEntityMixin extends LivingEntity implements ModifiedPlayer {
     private static final TrackedData<Boolean> IS_FLAT = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> IS_SHAKY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Float> REACH = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private int flatJumps;
 
     protected PlayerEntityMixin(EntityType<? extends LivingEntity> entityType, World world) {
@@ -32,6 +33,7 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     private void initDataTrackerInjection(CallbackInfo ci) {
         this.dataTracker.startTracking(IS_FLAT, false);
         this.dataTracker.startTracking(IS_SHAKY, false);
+        this.dataTracker.startTracking(REACH, 4.5f);
     }
 
     @Override
@@ -106,5 +108,15 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     @Override
     public int getFlatJumps() {
         return flatJumps;
+    }
+
+    @Override
+    public void setNormalReach(float value) {
+        this.dataTracker.set(REACH, value);
+    }
+
+    @Override
+    public float getNormalReach() {
+        return this.dataTracker.get(REACH);
     }
 }

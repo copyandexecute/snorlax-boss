@@ -1,5 +1,6 @@
 package de.hglabor.snorlaxboss.command
 
+import com.mojang.brigadier.arguments.FloatArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.context.CommandContext
 import de.hglabor.snorlaxboss.SnorlaxBoss.Companion.IS_DEVELOPMENT
@@ -51,6 +52,16 @@ object CommandManager {
                 runs {
                     val player = this.source.playerOrThrow
                     val (item, slot) = player.randomMainInvItem ?: Pair(null, null)
+                }
+            }
+
+            command("reach") {
+                argument<Float>("value", FloatArgumentType.floatArg(0.0f, 4.5f)) { value ->
+                    runs {
+                        (this.source.playerOrThrow as? ModifiedPlayer?)?.apply {
+                            setNormalReach(value())
+                        }
+                    }
                 }
             }
 

@@ -706,9 +706,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         if (!player.isFlat()) {
             player.setFlat(true)
             player.setFlatJumps(0)
+            player.setNormalReach(3.0f)
             mcCoroutineTask(delay = Random.nextInt(10, 15).seconds) {
                 if (player.isFlat()) {
                     player.setFlat(false)
+                    player.setNormalReach(4.5f)
                     world.playSound(
                         null,
                         player.blockPos,

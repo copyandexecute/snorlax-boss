@@ -11,6 +11,7 @@
   ],
   "client": [
     "gui.hud.InGameOverlayRendererMixin",
+    "network.ClientPlayerInteractionManagerMixin",
     "option.KeyBindingMixin",
     "render.CameraMixin",
     "render.GameRendererMixin",

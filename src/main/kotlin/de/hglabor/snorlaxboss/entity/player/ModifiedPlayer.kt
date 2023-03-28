@@ -7,4 +7,6 @@ interface ModifiedPlayer {
     fun isShaky(): Boolean
     fun setFlatJumps(amount: Int)
     fun getFlatJumps(): Int
+    fun setNormalReach(value: Float)
+    fun getNormalReach(): Float
 }
