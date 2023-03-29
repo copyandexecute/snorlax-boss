@@ -1,0 +1,56 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.throw": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.28,
+			"bones": {
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [-87.37884, 17.48281, 0.78795],
+							"easing": "easeOutElastic"
+						},
+						"0.28": {
+							"vector": [-172.34858, 15.94072, 34.72664],
+							"easing": "easeOutBack"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						},
+						"0.28": {
+							"vector": [0, 4, 0],
+							"easing": "easeOutBack"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [-87.37884, -17.48281, -0.78795],
+							"easing": "easeOutElastic"
+						},
+						"0.28": {
+							"vector": [-172.34858, -15.94072, -34.72664],
+							"easing": "easeOutBack"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						},
+						"0.28": {
+							"vector": [0, 4, 0],
+							"easing": "easeOutBack"
+						}
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}
