@@ -324,6 +324,102 @@
 				}
 			}
 		},
+		"animation.hglabor.pickup": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.28,
+			"bones": {
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.28": {
+							"vector": [-87.37884, 17.48281, 0.78795],
+							"easing": "easeOutElastic"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.28": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.28": {
+							"vector": [-87.37884, -17.48281, -0.78795],
+							"easing": "easeOutElastic"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.28": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.throw": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.28,
+			"bones": {
+				"right_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [-87.37884, 17.48281, 0.78795],
+							"easing": "easeOutElastic"
+						},
+						"0.28": {
+							"vector": [-172.34858, 15.94072, 34.72664],
+							"easing": "easeOutBack"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						},
+						"0.28": {
+							"vector": [0, 4, 0],
+							"easing": "easeOutBack"
+						}
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"0.0": {
+							"vector": [-87.37884, -17.48281, -0.78795],
+							"easing": "easeOutElastic"
+						},
+						"0.28": {
+							"vector": [-172.34858, -15.94072, -34.72664],
+							"easing": "easeOutBack"
+						}
+					},
+					"position": {
+						"0.0": {
+							"vector": [0, 0, -3],
+							"easing": "easeInOutExpo"
+						},
+						"0.28": {
+							"vector": [0, 4, 0],
+							"easing": "easeOutBack"
+						}
+					}
+				}
+			}
+		},
 		"animation.hglabor.sleep-idle": {
 			"loop": true,
 			"animation_length": 2,
@@ -344,6 +440,22 @@
 						},
 						"2.0": {
 							"vector": [1, 1, 1]
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.rolling": {
+			"loop": true,
+			"animation_length": 1,
+			"bones": {
+				"root": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"1.0": {
+							"vector": [720, 0, 0]
 						}
 					}
 				}
