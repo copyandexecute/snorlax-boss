@@ -9,6 +9,7 @@ import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.particle.Attacks
+import kotlinx.coroutines.cancel
 import net.minecraft.enchantment.Enchantments
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.player.PlayerEntity
@@ -18,9 +19,13 @@ import net.minecraft.potion.Potions
 import net.minecraft.registry.Registries
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.util.Identifier
+import net.minecraft.util.math.MathHelper
 import net.silkmc.silk.commands.command
 import net.silkmc.silk.core.item.itemStack
 import net.silkmc.silk.core.item.setPotion
+import net.silkmc.silk.core.task.infiniteMcCoroutineTask
+import net.silkmc.silk.core.task.mcCoroutineTask
+import net.silkmc.silk.core.text.broadcastText
 
 object CommandManager {
     fun init() {
@@ -33,6 +38,42 @@ object CommandManager {
                 argument<Int>("radius", IntegerArgumentType.integer(1)) { radius ->
                     runs {
                         Attacks.radialWave(this.source.playerOrThrow, radius())
+                    }
+                }
+            }
+
+            command("snorlax") {
+                literal("spinning") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            it.isSpinning = !it.isSpinning
+                        }
+                    }
+                }
+                literal("rolling") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            it.isRolling = !it.isRolling
+                        }
+                    }
+                }
+                literal("come") {
+                    runs {
+                        val server = this.source.server
+                        val pos = this.source.playerOrThrow.pos
+                        val allSnorlax = getAllSnorlax()
+                        infiniteMcCoroutineTask {
+                            allSnorlax.forEach {
+                                if (it.squaredDistanceTo(pos.x,pos.y,pos.z) > 9) {
+                                    it.isMoving = true
+                                    it.moveControl.moveTo(pos.x, pos.y, pos.z, 2.0)
+                                } else {
+                                    it.isMoving = false
+                                    server.broadcastText("Reached Spot")
+                                    this.cancel()
+                                }
+                            }
+                        }
                     }
                 }
             }
