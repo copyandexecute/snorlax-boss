@@ -72,6 +72,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         ServerBossBar(Text.translatable("entity.snorlaxboss.snorlax"), BossBar.Color.BLUE, BossBar.Style.PROGRESS)
     private val HIT_DISTANCE = 6.0f
     private val RUN_DISTANCE = 3.5f
+    private var fixedJumpVelocity: Vec3d = Vec3d.ZERO
 
     var forceAnimationReset = false
 
@@ -117,7 +118,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     init {
         attack = attack
         this.moveControl = SnorlaxMoveControl()
-        this.stepHeight = 2.5f
+        this.stepHeight = 3.5f
     }
 
     enum class Attack(
@@ -129,7 +130,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         CHECK_TARGET("check-target".loop(), Snorlax::CheckTargetTask),
         PUNCH("punch".hold(), Snorlax::PunchTask),
         MULTIPLE_PUNCH("punch".hold(), Snorlax::MultiplePunchTask),
-        RUN("run".loop(), Snorlax::RunTask),
+        RUN("idle".loop(), Snorlax::RunTask),
         ROLL("idle".loop(), Snorlax::RollTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP("pickup".hold(), Snorlax::PickUpTask),
@@ -169,9 +170,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     override fun tick() {
         super.tick()
+        task?.tick()
         if (task?.isFinished == true) {
             if (isDebug) {
                 task?.onDisable()
+                task = null
             } else {
                 attack = task!!.nextTask()
             }
@@ -180,7 +183,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         if (!world.isClient) {
             if (istAmSpringen) {
-                breakBlocksWhileRolling()
+                breakBlocksWhileJumping()
             }
 
             if (isRolling) {
@@ -221,8 +224,19 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    fun moveToPosition(pos: Vec3d) {
+        isMoving = true
+        //targetPos = pos
+    }
+
+    private fun breakBlocksWhileJumping() {
+        Vec3i(eyePos.x, eyePos.y, eyePos.z).filledSpherePositionSet(5).filter { it.y > y }.forEach {
+            world.breakBlock(it, false, this@Snorlax)
+        }
+    }
+
     private fun breakBlocksWhileRolling() {
-        Vec3i(x, y, z).filledSpherePositionSet(5).filter { it.y > y + 1 }.forEach {
+        Vec3i(x, y, z).filledSpherePositionSet(7).filter { it.y > y }.forEach {
             world.breakBlock(it, false, this@Snorlax)
         }
     }
@@ -238,7 +252,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     override fun getTarget(): LivingEntity? {
-        return world.getClosestPlayer(this, 40.0)
+        return world.getClosestPlayer(this, 80.0)
     }
 
     override fun isFireImmune(): Boolean = true
@@ -402,12 +416,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         abstract fun onEnable()
         open fun onDisable() = jobs.forEach(Job::cancel)
         open fun nextTask(): Attack = Attack.IDLE
+        open fun tick() {}
     }
 
     override fun getJumpVelocity(): Float {
         val jumpControlModifier =
             (if ((moveControl as SnorlaxMoveControl).jumpTry > 0) (moveControl as SnorlaxMoveControl).jumpTry else 1)
-        val rollingModifier = (if (isRolling) 3 else 1)
+        val rollingModifier = (if (isRolling) 1.5f else 1.0f)
         return 0.42f * this.jumpVelocityMultiplier * jumpControlModifier * rollingModifier
     }
 
@@ -476,14 +491,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     inner class JumpTask : Task() {
+        private val radius = Random.nextInt(12, 50)
+
         override fun onEnable() {
             sound(SoundManager.JUMP, 0.9f, 0.9f)
-            modifyVelocity(0, Random.nextDouble(1.0, 2.0), 0)
+            modifyVelocity(0, radius / 16.0, 0)
             jobs += infiniteMcCoroutineTask(delay = 5.ticks) {
                 val isGrounded = isOnGround
                 if (isGrounded) {
                     mcCoroutineTask(delay = 2.seconds) { isFinished = true }
-                    val radius = Random.nextInt(12, 50)
 
                     sound(SoundManager.LANDING, 0.2f + radius / 30f, 1f)
 
@@ -508,53 +524,46 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         playSound(SoundManager.FOOT_STEP, 1f, 0.6f)
     }
 
-    inner class RollTask : Task() {
+    inner class RollTask : RunTask() {
         override fun onEnable() {
+            super.onEnable()
             isRolling = true
-            lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
-
-            jobs += infiniteMcCoroutineTask {
-                if (target == null) {
-                    isFinished = true
-                } else {
-                    if (pos.distanceTo(target!!.pos) >= RUN_DISTANCE) {
-                        if (navigation.isIdle) {
-                            //xc y navigation.startMovingTo(target, 3.0)
-                        }
-                    } else {
-                        isFinished = true
-                    }
-                }
-            }
+            speed = 2.9
         }
 
         override fun onDisable() {
             super.onDisable()
             isRolling = false
-            navigation.stop()
         }
     }
 
-    inner class RunTask : Task() {
+    open inner class RunTask : Task() {
+        private var targetPos: Vec3d = Vec3d.ZERO
+        protected var speed = 2.0
+
         override fun onEnable() {
-            jobs += infiniteMcCoroutineTask {
-                if (target == null) {
-                    isFinished = true
+            isMoving = true
+            targetPos = target?.pos ?: Vec3d.ZERO
+        }
+
+        override fun tick() {
+            if (targetPos != Vec3d.ZERO) {
+                if (squaredDistanceTo(targetPos) > 9) {
+                    moveControl.moveTo(targetPos.x, targetPos.y, targetPos.z, speed)
                 } else {
-                    if (pos.distanceTo(target!!.pos) >= RUN_DISTANCE) {
-                        if (navigation.isIdle) {
-                            navigation.startMovingTo(target, 2.0)
-                        }
-                    } else {
-                        isFinished = true
-                    }
+                    isFinished = true
                 }
+            } else {
+                isFinished = true
             }
         }
 
         override fun onDisable() {
             super.onDisable()
-            navigation.stop()
+            server?.broadcastText("Disabled running pos: $targetPos") { }
+            isMoving = false
+            targetPos = Vec3d.ZERO
+            (moveControl as SnorlaxMoveControl).jumpTry = 0
         }
 
         override fun nextTask(): Attack {
