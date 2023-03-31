@@ -14,6 +14,7 @@ import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import de.hglabor.snorlaxboss.utils.weightedCollection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import net.minecraft.block.BlockRenderType
 import net.minecraft.block.BlockState
 import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
@@ -35,6 +36,7 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.nbt.NbtCompound
+import net.minecraft.particle.BlockStateParticleEffect
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.registry.tag.BlockTags
 import net.minecraft.server.network.ServerPlayerEntity
@@ -196,6 +198,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             if (isRolling) {
                 breakBlocksWhileRolling()
                 squashEntitiesWhileRolling()
+                addRollParticle()
             }
 
             if (isSpinning) {
@@ -542,11 +545,39 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         playSound(SoundManager.FOOT_STEP, 1f, 0.6f)
     }
 
+    private fun addRollParticle() {
+        val serverWorld = world as? ServerWorld ?: return
+        val blockState = this.steppingBlockState
+        if (blockState.renderType != BlockRenderType.INVISIBLE) {
+            for (i in 0..29) {
+                val x = this.x + Random.nextDouble(-dimension.width.toDouble(),dimension.width.toDouble())
+                val y = this.y
+                val z = this.z + Random.nextDouble(-dimension.width.toDouble(),dimension.width.toDouble())
+                serverWorld.spawnParticles(
+                    BlockStateParticleEffect(ParticleTypes.BLOCK, blockState),
+                    x,
+                    y,
+                    z,
+                    1,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                )
+            }
+        }
+    }
+
     inner class RollTask : RunTask() {
         override fun onEnable() {
             super.onEnable()
             isRolling = true
-            speed = 2.9
+            speed = 0.0
+        }
+
+        override fun tick() {
+            speed = 3.5.coerceAtMost(speed + 0.1)
+            super.tick()
         }
 
         override fun onDisable() {
@@ -906,6 +937,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             }.next()
         }
     }
+
+    override fun isPushable(): Boolean = false
 
     private fun tryFlatPlayer(player: PlayerEntity) {
         val modifiedPlayer = player as ModifiedPlayer
