@@ -195,6 +195,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
             if (isRolling) {
                 breakBlocksWhileRolling()
+                squashEntitiesWhileRolling()
             }
 
             if (isSpinning) {
@@ -246,6 +247,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     private fun breakBlocksWhileRolling() {
         Vec3i(x, y, z).filledSpherePositionSet(7).filter { it.y > y }.forEach {
             world.breakBlock(it, false, this@Snorlax)
+        }
+    }
+
+    private fun squashEntitiesWhileRolling() {
+        world.getOtherEntities(this, boundingBox.expand(2.0)).filterIsInstance<PlayerEntity>().forEach {
+            tryFlatPlayer(it)
         }
     }
 
@@ -877,12 +884,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                         mcCoroutineTask(delay = 1.seconds) { isFinished = true }
                         world.getEntitiesByClass(PlayerEntity::class.java, Box.of(pos, 14.0, 5.0, 14.0)) { true }
                             .forEach { player ->
-                                world.playSound(
-                                    null,
-                                    player.blockPos,
-                                    SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT,
-                                    SoundCategory.PLAYERS
-                                )
                                 tryFlatPlayer(player)
                                 tryAttackWithShieldBreak(player)
                             }
@@ -909,6 +910,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     private fun tryFlatPlayer(player: PlayerEntity) {
         val modifiedPlayer = player as ModifiedPlayer
         if (!player.isFlat()) {
+            world.playSound(null, player.blockPos, SoundEvents.ENTITY_PUFFER_FISH_BLOW_OUT, SoundCategory.PLAYERS)
             player.setFlat(true)
             player.setFlatJumps(0)
             player.setNormalReach(3.0f)
