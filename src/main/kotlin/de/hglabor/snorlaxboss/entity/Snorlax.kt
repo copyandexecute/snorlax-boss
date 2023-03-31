@@ -33,6 +33,7 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry
 import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.entity.projectile.ProjectileEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.nbt.NbtCompound
@@ -55,6 +56,7 @@ import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
 import net.silkmc.silk.core.text.broadcastText
 import net.silkmc.silk.core.text.literal
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.GeoAnimatable
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
@@ -457,6 +459,26 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    fun onProjectileCollision(
+        projectileEntity: ProjectileEntity,
+        ci: CallbackInfo
+    ) {
+        if (!world.isClient) {
+            if (isRolling) {
+                val reflect = projectileEntity.velocity.negate()
+
+                val x = Random.nextDouble(-1.0, 1.0)
+                val y = Random.nextDouble(-1.0, 1.0)
+                val z = Random.nextDouble(-1.0, 1.0)
+
+                projectileEntity.setVelocity(this, pitch, yaw, 0.0f, 1.5f, 1.0f)
+                projectileEntity.velocity = reflect.multiply(x, y, z)
+
+                ci.cancel()
+            }
+        }
+    }
+
     override fun calculateBoundingBox(): Box {
         return if (attack == Attack.SLEEP) {
             dimension.getBoxAt(pos.subtract(directionVector.normalize().multiply(2.0)))
@@ -550,9 +572,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         val blockState = this.steppingBlockState
         if (blockState.renderType != BlockRenderType.INVISIBLE) {
             for (i in 0..29) {
-                val x = this.x + Random.nextDouble(-dimension.width.toDouble(),dimension.width.toDouble())
+                val x = this.x + Random.nextDouble(-dimension.width.toDouble(), dimension.width.toDouble())
                 val y = this.y
-                val z = this.z + Random.nextDouble(-dimension.width.toDouble(),dimension.width.toDouble())
+                val z = this.z + Random.nextDouble(-dimension.width.toDouble(), dimension.width.toDouble())
                 serverWorld.spawnParticles(
                     BlockStateParticleEffect(ParticleTypes.BLOCK, blockState),
                     x,

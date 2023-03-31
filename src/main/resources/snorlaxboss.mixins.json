@@ -8,6 +8,7 @@
     "accessor.WorldAccessor",
     "entity.LivingEntityMixin",
     "entity.player.PlayerEntityMixin",
+    "entity.projectile.ProjectileEntityMixin",
     "network.ServerPlayNetworkHandlerMixin"
   ],
   "client": [
