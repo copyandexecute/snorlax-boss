@@ -2,6 +2,7 @@ package de.hglabor.snorlaxboss.mixin.entity.player;
 
 import de.hglabor.snorlaxboss.entity.damage.DamageManager;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -11,10 +12,12 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -78,6 +81,11 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
         } else {
             return super.blockedByShield(source);
         }
+    }
+
+    @Redirect(method = "tickRiding", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;stopRiding()V"))
+    private void tickRidingInjection(PlayerEntity instance) {
+        ModifiedPlayerManager.INSTANCE.handleSnorlaxDismount(instance);
     }
 
     @Override

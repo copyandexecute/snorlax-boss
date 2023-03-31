@@ -52,6 +52,7 @@ import net.silkmc.silk.core.math.geometry.filledSpherePositionSet
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
 import net.silkmc.silk.core.text.broadcastText
+import net.silkmc.silk.core.text.literal
 import software.bernie.geckolib.animatable.GeoEntity
 import software.bernie.geckolib.core.animatable.GeoAnimatable
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
@@ -87,6 +88,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     var isRolling: Boolean
         get() = this.dataTracker.get(ROLLING)
         set(value) = this.dataTracker.set(ROLLING, value)
+
+    var isThrowing: Boolean
+        get() = this.dataTracker.get(THROWING)
+        set(value) = this.dataTracker.set(THROWING, value)
 
     var isMoving: Boolean
         get() = this.dataTracker.get(MOVING)
@@ -133,8 +138,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         RUN("idle".loop(), Snorlax::RunTask),
         ROLL("idle".loop(), Snorlax::RollTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
-        PICKUP("pickup".hold(), Snorlax::PickUpTask),
-        THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
+        PICKUP_AND_THROW("pickup".hold(), Snorlax::PickUpAndThrowTask),
+
+        //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
         JUMP("jump".hold(), Snorlax::JumpTask);
     }
@@ -165,6 +171,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val ROLLING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val MOVING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val JUMPING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val THROWING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
 
 
@@ -210,6 +217,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         dataTracker.startTracking(ROLLING, false)
         dataTracker.startTracking(MOVING, false)
         dataTracker.startTracking(JUMPING, false)
+        dataTracker.startTracking(THROWING, false)
     }
 
     override fun readCustomDataFromNbt(nbt: NbtCompound) {
@@ -426,6 +434,19 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return 0.42f * this.jumpVelocityMultiplier * jumpControlModifier * rollingModifier
     }
 
+    private fun throwRidingEntites(callBack: (() -> Unit)?) {
+        isThrowing = true
+        val directionVector = directionVector.normalize()
+        passengersDeep.forEach {
+            it.stopRiding()
+            it.modifyVelocity(Vec3d(directionVector.x, Random.nextDouble(2.0, 4.0), directionVector.z))
+        }
+        mcCoroutineTask(delay = 1.seconds) {
+            isThrowing = false
+            callBack?.invoke()
+        }
+    }
+
     override fun calculateBoundingBox(): Box {
         return if (attack == Attack.SLEEP) {
             dimension.getBoxAt(pos.subtract(directionVector.normalize().multiply(2.0)))
@@ -442,29 +463,19 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     //lecker pickup
-    inner class PickUpTask : Task() {
+    inner class PickUpAndThrowTask : Task() {
         override fun onEnable() {
             target?.startRiding(this@Snorlax, true)
-            //if (Random.nextBoolean()) {
+            passengersDeep.filterIsInstance<ServerPlayerEntity>()
+                .forEach { it.sendMessage("Relaxo hält dich fest".literal, true) }
             mcCoroutineTask(delay = 140.milliseconds) {
                 isSpinning = true
             }
-            // }
             mcCoroutineTask(delay = Random.nextInt(2, 3).seconds) {
                 isSpinning = false
-                isFinished = true
-            }
-        }
-
-        override fun nextTask(): Attack = Attack.THROW_PLAYER
-    }
-
-    inner class ThrowPlayerTask : Task() {
-        override fun onEnable() {
-            val directionVector = directionVector.normalize()
-            passengersDeep.forEach {
-                it.stopRiding()
-                it.modifyVelocity(Vec3d(directionVector.x, Random.nextDouble(2.0, 3.0), directionVector.z))
+                throwRidingEntites {
+                    isFinished = true
+                }
             }
         }
     }
@@ -941,20 +952,32 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             .add(AnimationController(this, "spinning", 0, this::spinningController))
             .add(AnimationController(this, "rolling", 0, this::rollingController))
             .add(AnimationController(this, "walking", 0, this::walkingController))
+            .add(AnimationController(this, "throwing", 0, this::throwingController))
     }
 
     private fun <T : GeoAnimatable> spinningController(state: AnimationState<T>): PlayState {
         if (isSpinning) {
-            state.controller.setAnimation("spin".loop())
-            return PlayState.CONTINUE
+            return state.setAndContinue("spin".loop())
+        } else {
+            state.controller.forceAnimationReset()
         }
         return PlayState.STOP
     }
 
     private fun <T : GeoAnimatable> rollingController(state: AnimationState<T>): PlayState {
         if (isRolling) {
-            state.controller.setAnimation("rolling".loop())
-            return PlayState.CONTINUE
+            return state.setAndContinue("rolling".loop())
+        } else {
+            state.controller.forceAnimationReset()
+        }
+        return PlayState.STOP
+    }
+
+    private fun <T : GeoAnimatable> throwingController(state: AnimationState<T>): PlayState {
+        if (isThrowing) {
+            return state.setAndContinue("throw".hold())
+        } else {
+            state.controller.forceAnimationReset()
         }
         return PlayState.STOP
     }

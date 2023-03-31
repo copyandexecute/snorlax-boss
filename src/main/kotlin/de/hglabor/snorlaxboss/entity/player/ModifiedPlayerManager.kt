@@ -1,10 +1,14 @@
 package de.hglabor.snorlaxboss.entity.player
 
+import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.event.events.PlayerEvents
 import net.minecraft.client.MinecraftClient
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvents
+import net.minecraft.text.Text
 import net.silkmc.silk.core.annotations.ExperimentalSilkApi
+import net.silkmc.silk.core.text.literal
 
 object ModifiedPlayerManager {
     @OptIn(ExperimentalSilkApi::class)
@@ -22,6 +26,14 @@ object ModifiedPlayerManager {
                     SoundCategory.PLAYERS
                 )
             }
+        }
+    }
+
+    fun PlayerEntity.handleSnorlaxDismount() {
+        if (vehicle is Snorlax) {
+            sendMessage(Text.of("Relaxo hält dich fest"), true)
+        } else {
+            stopRiding()
         }
     }
 
