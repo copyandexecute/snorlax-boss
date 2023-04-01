@@ -9,8 +9,7 @@
     "entity.LivingEntityMixin",
     "entity.player.PlayerEntityMixin",
     "entity.projectile.ProjectileEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin",
-    "particle.ParticleManagerMixin"
+    "network.ServerPlayNetworkHandlerMixin"
   ],
   "client": [
     "gui.hud.InGameOverlayRendererMixin",
