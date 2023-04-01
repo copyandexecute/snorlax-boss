@@ -18,6 +18,7 @@
     "render.CameraMixin",
     "render.GameRendererMixin",
     "render.entity.PlayerEntityRendererMixin",
+    "render.gui.hud.InGameHudMixin",
     "world.ClientWorldMixin"
   ],
   "injectors": {

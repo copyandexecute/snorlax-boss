@@ -3,6 +3,7 @@ package de.hglabor.snorlaxboss.mixin.entity.player;
 import de.hglabor.snorlaxboss.entity.damage.DamageManager;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager;
+import net.minecraft.client.render.entity.model.ParrotEntityModel;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -15,6 +16,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -26,7 +28,10 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     private static final TrackedData<Boolean> IS_FLAT = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> IS_SHAKY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Float> REACH = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    private static final TrackedData<Integer> MAX_SLEEP_TICKS = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Boolean> FORCE_SLEEPING = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private int flatJumps;
+    private int sleepTicks;
 
     protected PlayerEntityMixin(EntityType<? extends LivingEntity> entityType, World world) {
         super(entityType, world);
@@ -37,6 +42,8 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
         this.dataTracker.startTracking(IS_FLAT, false);
         this.dataTracker.startTracking(IS_SHAKY, false);
         this.dataTracker.startTracking(REACH, 4.5f);
+        this.dataTracker.startTracking(MAX_SLEEP_TICKS, 100);
+        this.dataTracker.startTracking(FORCE_SLEEPING, false);
     }
 
     @Override
@@ -44,6 +51,23 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
         super.onTrackedDataSet(data);
         if (IS_FLAT.equals(data)) {
             this.calculateDimensions();
+        } else if (FORCE_SLEEPING.equals(data)) {
+            if (isForceSleeping()) {
+                this.sleepTicks = 0;
+            }
+        }
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void tickInjection(CallbackInfo ci) {
+        if (isForceSleeping()) {
+            this.sleepTicks++;
+            if (sleepTicks > getMaxSleepTicks()) {
+                if (!world.isClient) {
+                    this.setForceSleeping(false);
+                }
+                sleepTicks = 0;
+            }
         }
     }
 
@@ -71,6 +95,13 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
             return 0.42F * this.getJumpVelocityMultiplier();
         } else {
             return 0.22F * this.getJumpVelocityMultiplier();
+        }
+    }
+
+    @Inject(method = "updatePose", at = @At("TAIL"))
+    private void updatePoseInjection(CallbackInfo ci) {
+        if (isForceSleeping()) {
+            setPose(EntityPose.SLEEPING);
         }
     }
 
@@ -126,5 +157,30 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     @Override
     public float getNormalReach() {
         return this.dataTracker.get(REACH);
+    }
+
+    @Override
+    public boolean isForceSleeping() {
+        return this.dataTracker.get(FORCE_SLEEPING);
+    }
+
+    @Override
+    public void setForceSleeping(boolean value) {
+        this.dataTracker.set(FORCE_SLEEPING, value);
+    }
+
+    @Override
+    public int getSleepTicks() {
+        return sleepTicks;
+    }
+
+    @Override
+    public void setMaxSleepTicks(int i) {
+        this.dataTracker.set(MAX_SLEEP_TICKS, i);
+    }
+
+    @Override
+    public int getMaxSleepTicks() {
+        return this.dataTracker.get(MAX_SLEEP_TICKS);
     }
 }

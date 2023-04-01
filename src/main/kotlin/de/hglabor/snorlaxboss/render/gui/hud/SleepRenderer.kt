@@ -1,0 +1,27 @@
+package de.hglabor.snorlaxboss.render.gui.hud
+
+import com.mojang.blaze3d.systems.RenderSystem
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
+import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gui.DrawableHelper
+import net.minecraft.client.util.math.MatrixStack
+
+object SleepRenderer {
+    fun handleSleepRendering(matrices: MatrixStack, scaledWidth: Int, scaledHeight: Int, client: MinecraftClient) {
+        val player = client.player as ModifiedPlayer
+        if (player.sleepTicks > 0) {
+            client.profiler.push("forcesleep")
+            RenderSystem.disableDepthTest()
+            val h = player.sleepTicks.toFloat()
+            var j: Float = h / 100.0f
+            if (j > 1.0f) {
+                j = 1.0f - (h - 100.0f) / 10.0f
+            }
+            val k = (220.0f * j).toInt() shl 24 or 1052704
+            DrawableHelper.fill(matrices, 0, 0, scaledWidth, scaledHeight, k)
+            RenderSystem.enableDepthTest()
+            client.profiler.pop()
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f)
+        }
+    }
+}
