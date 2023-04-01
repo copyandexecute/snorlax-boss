@@ -154,10 +154,10 @@ object Attacks {
                 mcCoroutineTask(delay = count.ticks * 2) {
                     yOffset += 0.6
                     val particle = when (count) {
-                        0 -> ParticleManager.SLEEP
-                        1 -> ParticleManager.SLEEP_MIDDLE
-                        2 -> ParticleManager.SLEEP_BIG
-                        else -> ParticleManager.SLEEP
+                        0 -> SnorlaxBossParticles.SLEEP
+                        1 -> SnorlaxBossParticles.SLEEP_MIDDLE
+                        2 -> SnorlaxBossParticles.SLEEP_BIG
+                        else -> SnorlaxBossParticles.SLEEP
                     }
                     world.spawnParticles(
                         particle, particlePos.x + yOffset, particlePos.y + yOffset, particlePos.z, 0, 0.0, 0.0, 0.0, 0.0

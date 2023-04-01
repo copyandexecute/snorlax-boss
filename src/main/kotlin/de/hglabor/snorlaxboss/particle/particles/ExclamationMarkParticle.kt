@@ -18,19 +18,15 @@ class ExclamationMarkParticle(
 
     init {
         this.maxAge = 60
+        this.scale = 5.0f
     }
 
-    override fun move(speed: Float): Particle {
-        return this;
-    }
-
-    override fun move(dx: Double, dy: Double, dz: Double) {
-    }
-
+    override fun move(speed: Float): Particle = this
+    override fun move(dx: Double, dy: Double, dz: Double) = Unit
     override fun getType(): ParticleTextureSheet = ParticleTextureSheet.PARTICLE_SHEET_OPAQUE
 
     @Environment(EnvType.CLIENT)
-    class Factory(private val spriteProvider: SpriteProvider, private val scale: Float) :
+    class Factory(private val spriteProvider: SpriteProvider) :
         ParticleFactory<DefaultParticleType> {
         override fun createParticle(
             defaultParticleType: DefaultParticleType,
@@ -44,7 +40,6 @@ class ExclamationMarkParticle(
         ): Particle {
             val exclamationMarkParticle = ExclamationMarkParticle(clientWorld, d, e, f, g, h, i)
             exclamationMarkParticle.setSprite(spriteProvider)
-            exclamationMarkParticle.scale(scale)
             return exclamationMarkParticle
         }
     }

@@ -6,7 +6,7 @@ import de.hglabor.snorlaxboss.mixin.accessor.MoveControllAccessor
 import de.hglabor.snorlaxboss.network.NetworkManager
 import de.hglabor.snorlaxboss.network.NetworkManager.BOOM_SHAKE_PACKET
 import de.hglabor.snorlaxboss.particle.Attacks
-import de.hglabor.snorlaxboss.particle.ParticleManager
+import de.hglabor.snorlaxboss.particle.SnorlaxBossParticles
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
 import de.hglabor.snorlaxboss.sound.SoundManager
 import de.hglabor.snorlaxboss.utils.CustomHitBox
@@ -143,6 +143,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         ROLL("idle".loop(), Snorlax::RollTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP_AND_THROW("pickup".hold(), Snorlax::PickUpAndThrowTask),
+        YAWN("idle".loop(), Snorlax::YawnTask),
 
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
@@ -533,6 +534,26 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    inner class YawnTask : Task() {
+        override fun onEnable() {
+            val pos = eyePos.add(directionVector.normalize().subtract(0.0,0.3,0.0).multiply(2.0))
+            val serverWorld = world as? ServerWorld?
+            repeat(20) {
+                serverWorld?.spawnParticles(
+                    SnorlaxBossParticles.YAWN,
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                    1,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                )
+            }
+        }
+    }
+
     inner class JumpTask : Task() {
         private val radius = Random.nextInt(12, 50)
 
@@ -666,7 +687,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
                     val pos = eyePos.add(0.0, 2.5, 0.0)
                     (world as? ServerWorld?)?.spawnParticlesForcefully(
-                        ParticleManager.EXCLAMATION_MARK, pos.x, pos.y, pos.z, 0, 0.0, 0.0, 0.0, 0.0
+                        SnorlaxBossParticles.EXCLAMATION_MARK, pos.x, pos.y, pos.z, 0, 0.0, 0.0, 0.0, 0.0
                     )
                     sound(SoundManager.EXCLAMATION_MARK, 1f, 1f)
                 }

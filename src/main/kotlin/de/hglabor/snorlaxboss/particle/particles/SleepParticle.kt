@@ -21,6 +21,7 @@ class SleepParticle(
     init {
         this.maxAge = 20
     }
+
     override fun getType(): ParticleTextureSheet {
         return ParticleTextureSheet.PARTICLE_SHEET_OPAQUE
     }
@@ -49,7 +50,7 @@ class SleepParticle(
     }
 
     @Environment(EnvType.CLIENT)
-    class Factory(private val spriteProvider: SpriteProvider, private val scale: Float, private val maxAge: Int) :
+    open class Factory(private val spriteProvider: SpriteProvider, private val scale: Float, private val maxAge: Int) :
         ParticleFactory<DefaultParticleType> {
         override fun createParticle(
             defaultParticleType: DefaultParticleType,
@@ -68,4 +69,8 @@ class SleepParticle(
             return flameParticle
         }
     }
+
+    class FactorySmall(spriteProvider: SpriteProvider) : Factory(spriteProvider, 1f, 1 * 11)
+    class FactoryMedium(spriteProvider: SpriteProvider) : Factory(spriteProvider, 2.5f, 1 * 12)
+    class FactoryBig(spriteProvider: SpriteProvider) : Factory(spriteProvider,  3.5f, 1 * 13)
 }

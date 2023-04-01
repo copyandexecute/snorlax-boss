@@ -5,7 +5,7 @@ import de.hglabor.snorlaxboss.entity.EntityManager
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
 import de.hglabor.snorlaxboss.item.ItemManager
 import de.hglabor.snorlaxboss.network.NetworkManager
-import de.hglabor.snorlaxboss.particle.ParticleManager
+import de.hglabor.snorlaxboss.particle.SnorlaxBossParticles
 import de.hglabor.snorlaxboss.sound.SoundManager
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.loader.api.FabricLoader
@@ -16,7 +16,6 @@ class SnorlaxBoss : ModInitializer {
     }
 
     override fun onInitialize() {
-        ParticleManager.init()
         NetworkManager.init()
         ModifiedPlayerManager.init()
         SoundManager.init()

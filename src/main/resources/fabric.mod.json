@@ -20,11 +20,18 @@
         "adapter": "kotlin",
         "value": "de.hglabor.snorlaxboss.SnorlaxBoss"
       }
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "de.hglabor.snorlaxboss.SnorlaxBossClient"
+      }
     ]
   },
   "mixins": [
     "snorlaxboss.mixins.json"
   ],
+  "accessWidener": "snorlaxboss.accesswidener",
   "depends": {
     "fabricloader": ">=0.14.12",
     "fabric": "*",

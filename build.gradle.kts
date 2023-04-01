@@ -27,6 +27,10 @@ dependencies {
     modImplementation("net.silkmc:silk-network:1.9.5")
 }
 
+loom {
+    accessWidenerPath.set(file("src/main/resources/snorlaxboss.accesswidener"))
+}
+
 tasks {
 
     processResources {
