@@ -772,21 +772,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                         }
                     }
 
-                    jobs += infiniteMcCoroutineTask(period = 7.ticks) {
+                    jobs += infiniteMcCoroutineTask(period = 4.ticks) {
                         tryAttack(target)
                         repeat(Random.nextInt(1, 3)) {
-                            val (item, slot) = player?.randomMainInvItem ?: return@repeat
                             mcCoroutineTask(delay = it.ticks) {
-                                world?.playSound(
-                                    null,
-                                    player.blockPos,
-                                    SoundEvents.ITEM_BUNDLE_DROP_CONTENTS,
-                                    SoundCategory.NEUTRAL,
-                                    1f,
-                                    1f
-                                )
-                                player.inventory.main[slot] = ItemStack.EMPTY
-                                player.dropItem(item, true, false)
+                                player?.dropRandomFood(true) {
+                                    player.playSound(SoundEvents.ITEM_BUNDLE_DROP_CONTENTS)
+                                }
                             }
                         }
                     }
@@ -815,6 +807,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
             }.next()
         }
+    }
+
+    private fun PlayerEntity.playSound(soundEvent: SoundEvent) {
+        world.playSound(null, blockPos, soundEvent, SoundCategory.PLAYERS, 1f, 1f)
     }
 
     inner class MultiplePunchTask : Task() {
