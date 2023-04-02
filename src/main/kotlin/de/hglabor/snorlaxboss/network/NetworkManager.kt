@@ -1,6 +1,9 @@
 package de.hglabor.snorlaxboss.network
 
 import de.hglabor.snorlaxboss.entity.Snorlax
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
+import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager.tryWakeUp
 import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.mixin.accessor.WorldAccessor
 import de.hglabor.snorlaxboss.render.camera.CameraShaker
@@ -9,8 +12,10 @@ import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import kotlinx.serialization.ExperimentalSerializationApi
 import net.minecraft.entity.data.TrackedDataHandler
 import net.minecraft.entity.data.TrackedDataHandlerRegistry
+import net.silkmc.silk.core.text.literal
 import net.silkmc.silk.network.packet.ClientPacketContext
 import net.silkmc.silk.network.packet.ServerToClientPacketDefinition
+import net.silkmc.silk.network.packet.c2sPacket
 import net.silkmc.silk.network.packet.s2cPacket
 import java.util.*
 
@@ -21,6 +26,7 @@ object NetworkManager {
     val SET_CUSTOM_HIT_BOX_PACKET = s2cPacket<CustomHitBox>("set_custom_hitbox".toId())
     val REMOVE_CUSTOM_HIT_BOX_PACKET = s2cPacket<UUIDWrapper>("remove_custom_hitbox".toId())
     val FORCE_ANIMATION_RESET = s2cPacket<UUIDWrapper>("force_animation_reset".toId())
+    val TRY_WAKE_UP = c2sPacket<Unit>("try_wake_up".toId())
 
     fun init() {
         TrackedDataHandlerRegistry.register(ATTACK)
@@ -43,6 +49,11 @@ object NetworkManager {
         FORCE_ANIMATION_RESET.receiveOnClient { packet, context ->
             val snorlax = context.snorlax(packet.uuid) ?: return@receiveOnClient
             snorlax.forceAnimationReset = true
+        }
+
+        TRY_WAKE_UP.receiveOnServer { _, context ->
+            context.player.sendMessage("Tried wake up".literal)
+            context.player.tryWakeUp()
         }
     }
 

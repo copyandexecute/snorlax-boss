@@ -37,6 +37,11 @@ object ModifiedPlayerManager {
         }
     }
 
+    fun PlayerEntity.tryWakeUp() {
+        val dummy = this as ModifiedPlayer
+        sleepTicks = maxSleepTicks.coerceAtMost(sleepTicks + 5)
+    }
+
     fun handleNormalReachDistance(default: Float): Float {
         val player = MinecraftClient.getInstance().player as? ModifiedPlayer ?: return default
         return player.getNormalReach()

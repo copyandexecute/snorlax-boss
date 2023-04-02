@@ -9,4 +9,7 @@ interface ModifiedPlayer {
     fun getFlatJumps(): Int
     fun setNormalReach(value: Float)
     fun getNormalReach(): Float
+    var isForceSleeping: Boolean
+    var maxSleepTicks: Int
+    var sleepTicks: Int
 }

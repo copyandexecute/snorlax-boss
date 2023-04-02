@@ -9,16 +9,17 @@
     "entity.LivingEntityMixin",
     "entity.player.PlayerEntityMixin",
     "entity.projectile.ProjectileEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin",
-    "particle.ParticleManagerMixin"
+    "network.ServerPlayNetworkHandlerMixin"
   ],
   "client": [
+    "MinecraftClientMixin",
     "gui.hud.InGameOverlayRendererMixin",
     "network.ClientPlayerInteractionManagerMixin",
     "option.KeyBindingMixin",
     "render.CameraMixin",
     "render.GameRendererMixin",
     "render.entity.PlayerEntityRendererMixin",
+    "render.gui.hud.InGameHudMixin",
     "world.ClientWorldMixin"
   ],
   "injectors": {

@@ -67,6 +67,7 @@ import software.bernie.geckolib.core.animation.RawAnimation
 import software.bernie.geckolib.core.`object`.PlayState
 import software.bernie.geckolib.util.GeckoLibUtil
 import kotlin.random.Random
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -461,8 +462,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     fun onProjectileCollision(
-        projectileEntity: ProjectileEntity,
-        ci: CallbackInfo
+        projectileEntity: ProjectileEntity, ci: CallbackInfo
     ) {
         if (!world.isClient) {
             if (isRolling) {
@@ -536,8 +536,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
     inner class YawnTask : Task() {
         override fun onEnable() {
-            val pos = eyePos.add(directionVector.normalize().subtract(0.0,0.3,0.0).multiply(2.0))
+            val pos = eyePos.add(directionVector.normalize().subtract(0.0, 0.3, 0.0).multiply(2.0))
             val serverWorld = world as? ServerWorld?
+            makePlayersSleepy()
             repeat(20) {
                 serverWorld?.spawnParticles(
                     SnorlaxBossParticles.YAWN,
@@ -550,6 +551,22 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     0.0,
                     0.0,
                 )
+            }
+        }
+
+        private fun makePlayersSleepy() {
+            world.getOtherEntities(this@Snorlax, boundingBox.expand(5.0)).filterIsInstance<ServerPlayerEntity>()
+                .forEach {
+                    it.sleepAfterDuration(Random.nextInt(1, 5).seconds, Random.nextInt(80, 160))
+                }
+        }
+
+        private fun ServerPlayerEntity.sleepAfterDuration(duration: Duration, maxSleepTicks: Int) {
+            val player = this as ModifiedPlayer
+            this.sendMessage(Text.translatable("snorlaxboss.player.tired"))
+            mcCoroutineTask(delay = duration) {
+                player.maxSleepTicks = maxSleepTicks
+                player.isForceSleeping = true
             }
         }
     }
@@ -597,15 +614,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 val y = this.y
                 val z = this.z + Random.nextDouble(-dimension.width.toDouble(), dimension.width.toDouble())
                 serverWorld.spawnParticles(
-                    BlockStateParticleEffect(ParticleTypes.BLOCK, blockState),
-                    x,
-                    y,
-                    z,
-                    1,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0
+                    BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), x, y, z, 1, 0.0, 0.0, 0.0, 0.0
                 )
             }
         }
@@ -1026,8 +1035,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
             it.controller.setAnimation(attack.animation)
             return@AnimationController PlayState.CONTINUE
-        }.setParticleKeyframeHandler { })
-            .add(AnimationController(this, "spinning", 0, this::spinningController))
+        }.setParticleKeyframeHandler { }).add(AnimationController(this, "spinning", 0, this::spinningController))
             .add(AnimationController(this, "rolling", 0, this::rollingController))
             .add(AnimationController(this, "walking", 0, this::walkingController))
             .add(AnimationController(this, "throwing", 0, this::throwingController))

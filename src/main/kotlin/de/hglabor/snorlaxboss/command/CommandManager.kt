@@ -11,6 +11,7 @@ import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.particle.Attacks
 import kotlinx.coroutines.cancel
 import net.minecraft.enchantment.Enchantments
+import net.minecraft.entity.EntityPose
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.Items
@@ -39,6 +40,13 @@ object CommandManager {
                     runs {
                         Attacks.radialWave(this.source.playerOrThrow, radius())
                     }
+                }
+            }
+
+            command("sleep") {
+                runs {
+                    val modifiedPlayer = this.source.playerOrThrow as ModifiedPlayer
+                    modifiedPlayer.isForceSleeping = !modifiedPlayer.isForceSleeping
                 }
             }
 
