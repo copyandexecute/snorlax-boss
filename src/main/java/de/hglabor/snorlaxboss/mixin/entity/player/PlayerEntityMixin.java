@@ -25,6 +25,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PlayerEntity.class)
 public abstract class PlayerEntityMixin extends LivingEntity implements ModifiedPlayer {
+    @Shadow
+    public abstract void sendMessage(Text message, boolean overlay);
+
     private static final TrackedData<Boolean> IS_FLAT = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> IS_SHAKY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Float> REACH = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -62,12 +65,13 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     private void tickInjection(CallbackInfo ci) {
         if (isForceSleeping()) {
             this.sleepTicks++;
-            if (sleepTicks > getMaxSleepTicks()) {
+            if (sleepTicks >= getMaxSleepTicks()) {
                 if (!world.isClient) {
                     this.setForceSleeping(false);
                 }
-                sleepTicks = 0;
             }
+        } else {
+            this.sleepTicks = Math.max(0, sleepTicks - 30);
         }
     }
 
@@ -172,6 +176,11 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Modified
     @Override
     public int getSleepTicks() {
         return sleepTicks;
+    }
+
+    @Override
+    public void setSleepTicks(int sleepTicks) {
+        this.sleepTicks = sleepTicks;
     }
 
     @Override

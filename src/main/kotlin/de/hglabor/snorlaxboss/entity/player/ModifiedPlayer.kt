@@ -11,5 +11,5 @@ interface ModifiedPlayer {
     fun getNormalReach(): Float
     var isForceSleeping: Boolean
     var maxSleepTicks: Int
-    val sleepTicks: Int
+    var sleepTicks: Int
 }
