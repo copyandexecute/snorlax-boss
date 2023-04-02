@@ -1,0 +1,20 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.hglabor.eating": {
+			"loop": true,
+			"bones": {
+				"left_arm": {
+					"rotation": {
+						"vector": ["-122.6308 + Math.cos(query.anim_time * 1500 +75) * -15", -24.9417, 30.2606],
+						"easing": "easeInOutBack"
+					},
+					"position": {
+						"vector": [0, 2, -4],
+						"easing": "easeInOutBack"
+					}
+				}
+			}
+		}
+	}
+}
