@@ -13,9 +13,9 @@ object SleepRenderer {
             client.profiler.push("forcesleep")
             RenderSystem.disableDepthTest()
             val h = player.sleepTicks.toFloat()
-            var j: Float = h / 100.0f
+            var j: Float = h / player.maxSleepTicks.toFloat()
             if (j > 1.0f) {
-                j = 1.0f - (h - 100.0f) / 10.0f
+                j = 1.0f - (h - player.maxSleepTicks.toFloat()) / 10.0f
             }
             val k = (220.0f * j).toInt() shl 24 or 1052704
             DrawableHelper.fill(matrices, 0, 0, scaledWidth, scaledHeight, k)
