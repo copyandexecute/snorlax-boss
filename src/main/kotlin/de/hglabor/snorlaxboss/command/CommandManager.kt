@@ -57,22 +57,18 @@ object CommandManager {
                         }
                     }
                 }
+                literal("throw") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            it.isThrowing = !it.isThrowing
+                        }
+                    }
+                }
                 literal("come") {
                     runs {
-                        val server = this.source.server
                         val pos = this.source.playerOrThrow.pos
-                        val allSnorlax = getAllSnorlax()
-                        infiniteMcCoroutineTask {
-                            allSnorlax.forEach {
-                                if (it.squaredDistanceTo(pos.x,pos.y,pos.z) > 9) {
-                                    it.isMoving = true
-                                    it.moveControl.moveTo(pos.x, pos.y, pos.z, 2.0)
-                                } else {
-                                    it.isMoving = false
-                                    server.broadcastText("Reached Spot")
-                                    this.cancel()
-                                }
-                            }
+                        getAllSnorlax().forEach {
+                            it.moveToPosition(pos)
                         }
                     }
                 }
