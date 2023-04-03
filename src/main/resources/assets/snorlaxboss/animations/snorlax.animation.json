@@ -517,6 +517,44 @@
 					}
 				}
 			}
+		},
+		"animation.hglabor.pickup-block": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.48,
+			"bones": {
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.48": {
+							"vector": [-182.5, 0, 0],
+							"easing": "easeOutQuad"
+						}
+					}
+				}
+			}
+		},
+		"animation.hglabor.throw-block": {
+			"animation_length": 0.48,
+			"bones": {
+				"arms": {
+					"rotation": {
+						"0.0": {
+							"vector": [-182.5, 0, 0],
+							"easing": "easeOutQuad"
+						},
+						"0.28": {
+							"vector": [-230, 0, 0],
+							"easing": "easeOutBack"
+						},
+						"0.48": {
+							"vector": [0, 0, 0],
+							"easing": "easeOutCirc"
+						}
+					}
+				}
+			}
 		}
 	},
 	"geckolib_format_version": 2
