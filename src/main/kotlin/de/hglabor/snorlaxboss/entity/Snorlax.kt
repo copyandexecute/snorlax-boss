@@ -16,6 +16,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import net.minecraft.block.BlockRenderType
 import net.minecraft.block.BlockState
+import net.minecraft.block.Blocks
+import net.minecraft.client.particle.BlockDustParticle
 import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
 import net.minecraft.entity.ai.control.MoveControl
@@ -34,6 +36,7 @@ import net.minecraft.entity.mob.MobEntity
 import net.minecraft.entity.mob.PathAwareEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.entity.projectile.ProjectileEntity
+import net.minecraft.item.BlockItem
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.nbt.NbtCompound
@@ -95,9 +98,13 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         get() = this.dataTracker.get(ROLLING)
         set(value) = this.dataTracker.set(ROLLING, value)
 
-    var isThrowing: Boolean
-        get() = this.dataTracker.get(THROWING)
-        set(value) = this.dataTracker.set(THROWING, value)
+    var isThrowingEntity: Boolean
+        get() = this.dataTracker.get(THROWING_ENTITY)
+        set(value) = this.dataTracker.set(THROWING_ENTITY, value)
+
+    var isThrowingBlock: Boolean
+        get() = this.dataTracker.get(THROWING_BLOCK)
+        set(value) = this.dataTracker.set(THROWING_BLOCK, value)
 
     var isEating: Boolean
         get() = this.dataTracker.get(EATING)
@@ -152,7 +159,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         RUN("idle".loop(), Snorlax::RunTask),
         ROLL("idle".loop(), Snorlax::RollTask),
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
-        PICKUP_AND_THROW("pickup".hold(), Snorlax::PickUpAndThrowTask),
+        PICKUP_AND_THROW_PLAYER("pickup".hold(), Snorlax::PickUpAndThrowPlayer),
+        PICKUP_AND_THROW_BLOCK("pickup-block".hold(), Snorlax::PickUpAndThrowBlock),
         YAWN("idle".loop(), Snorlax::YawnTask),
         EAT("idle".loop(), Snorlax::EatTask),
 
@@ -187,7 +195,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val ROLLING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val MOVING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val JUMPING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
-        private val THROWING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val THROWING_ENTITY = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val THROWING_BLOCK = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val EATING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val PICKUPFOOD = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
@@ -237,7 +246,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         dataTracker.startTracking(ROLLING, false)
         dataTracker.startTracking(MOVING, false)
         dataTracker.startTracking(JUMPING, false)
-        dataTracker.startTracking(THROWING, false)
+        dataTracker.startTracking(THROWING_ENTITY, false)
+        dataTracker.startTracking(THROWING_BLOCK, false)
         dataTracker.startTracking(EATING, false)
         dataTracker.startTracking(PICKUPFOOD, false)
     }
@@ -463,14 +473,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     private fun throwRidingEntites(callBack: (() -> Unit)?) {
-        isThrowing = true
+        isThrowingEntity = true
         val directionVector = directionVector.normalize()
         passengersDeep.forEach {
             it.stopRiding()
             it.modifyVelocity(Vec3d(directionVector.x, Random.nextDouble(2.0, 4.0), directionVector.z))
         }
         mcCoroutineTask(delay = 1.seconds) {
-            isThrowing = false
+            isThrowingEntity = false
             callBack?.invoke()
         }
     }
@@ -510,7 +520,87 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     //lecker pickup
-    inner class PickUpAndThrowTask : Task() {
+    inner class PickUpAndThrowBlock : Task() {
+        override fun onEnable() {
+            pickBlock()
+            mcCoroutineTask(delay = 500.milliseconds) {
+                isThrowingBlock = true
+
+                mcCoroutineTask(delay = 250.milliseconds) {
+                    throwBlock()
+                }
+
+                mcCoroutineTask(delay = 500.milliseconds) {
+                    isThrowingBlock = false
+                }
+            }
+        }
+
+        override fun tick() {
+            super.tick()
+            lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target?.pos ?: eyePos)
+        }
+
+        private fun pickBlock() {
+            val blockUnder = world.getBlockState(blockPos.down())
+            if (blockUnder.isAir) {
+                equipStack(EquipmentSlot.MAINHAND, Items.STONE.defaultStack)
+            } else {
+                equipStack(EquipmentSlot.MAINHAND, blockUnder.block.asItem().defaultStack)
+            }
+
+            val size = 2
+            for (x in 0 until size) {
+                for (y in 0 until size) {
+                    for (z in 0 until size) {
+                        val pos = blockPos.down().add(x, -y, z)
+                        val blockState = world.getBlockState(pos)
+                        world.setBlockState(pos, Blocks.AIR.defaultState)
+                        (world as? ServerWorld?)?.spawnParticles(
+                            BlockStateParticleEffect(ParticleTypes.BLOCK, blockState),
+                            pos.x + 0.5,
+                            pos.y + 0.5,
+                            pos.z + 0.5,
+                            1,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        )
+                        world.playSound(null, pos, blockState.soundGroup.placeSound, SoundCategory.BLOCKS)
+                    }
+                }
+            }
+        }
+
+        private fun throwBlock() {
+            //TODO was danach als schaden mäßíg?
+            //TODO hitbox schaden
+            val currentPos = eyePos
+            val targetPos = target?.pos
+            val direction = targetPos?.subtract(currentPos)
+
+            val fallingBlock = FallingBlockEntity.spawnFromBlock(
+                world,
+                BlockPos(x, eyePos.y + 5, z),
+                (mainHandStack.item as? BlockItem?)?.block?.defaultState ?: Blocks.DIAMOND_BLOCK.defaultState
+            ) ?: return
+            (fallingBlock as BiggerFallingBlock).scaleSize = 15f
+            (fallingBlock as BiggerFallingBlock).shooter = this@Snorlax
+            fallingBlock.dropItem = false
+            fallingBlock.modifyVelocity(
+                direction?.normalize()?.multiply(3.0) ?: Vec3d(
+                    directionVector.x,
+                    Random.nextDouble(1.0, 2.0),
+                    directionVector.z
+                )
+            )
+            equipStack(EquipmentSlot.MAINHAND, Items.AIR.defaultStack)
+        }
+    }
+
+    //lecker pickup
+    inner class PickUpAndThrowPlayer : Task() {
         override fun onEnable() {
             target?.startRiding(this@Snorlax, true)
             passengersDeep.filterIsInstance<ServerPlayerEntity>()
@@ -1113,7 +1203,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }.setParticleKeyframeHandler { }).add(AnimationController(this, "spinning", 0, this::spinningController))
             .add(AnimationController(this, "rolling", 0, this::rollingController))
             .add(AnimationController(this, "walking", 0, this::walkingController))
-            .add(AnimationController(this, "throwing", 0, this::throwingController))
+            .add(AnimationController(this, "throwing-entity", 0, this::throwingEntityController))
+            .add(AnimationController(this, "throwing-block", 0, this::throwingBlockController))
             .add(AnimationController(this, "eating", 0, this::eatingController))
     }
 
@@ -1135,8 +1226,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return PlayState.STOP
     }
 
-    private fun <T : GeoAnimatable> throwingController(state: AnimationState<T>): PlayState {
-        if (isThrowing) {
+    private fun <T : GeoAnimatable> throwingEntityController(state: AnimationState<T>): PlayState {
+        if (isThrowingEntity) {
             return state.setAndContinue("throw".hold())
         } else {
             state.controller.forceAnimationReset()
@@ -1144,6 +1235,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         return PlayState.STOP
     }
 
+    private fun <T : GeoAnimatable> throwingBlockController(state: AnimationState<T>): PlayState {
+        if (isThrowingBlock) {
+            return state.setAndContinue("throw-block".hold())
+        } else {
+            state.controller.forceAnimationReset()
+        }
+        return PlayState.STOP
+    }
 
     private fun <T : GeoAnimatable> eatingController(state: AnimationState<T>): PlayState {
         if (isPickingUpFood) {

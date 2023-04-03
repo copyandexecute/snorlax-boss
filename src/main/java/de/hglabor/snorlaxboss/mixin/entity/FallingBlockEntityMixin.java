@@ -7,11 +7,15 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FallingBlockEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.text.Text;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,6 +27,7 @@ public abstract class FallingBlockEntityMixin extends Entity implements BiggerFa
     @Shadow
     private BlockState block;
     private static final TrackedData<Float> SIZE = DataTracker.registerData(FallingBlockEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    private Entity shooter;
 
     public FallingBlockEntityMixin(EntityType<?> type, World world) {
         super(type, world);
@@ -51,9 +56,18 @@ public abstract class FallingBlockEntityMixin extends Entity implements BiggerFa
                 for (int z = 0; z < size; z++) {
                     var blockPos = getBlockPos().add(x, y, z);
                     world.setBlockState(blockPos, block);
-                    world.playSound(null,blockPos,block.getSoundGroup().getPlaceSound(), SoundCategory.BLOCKS);
+                    world.playSound(null, blockPos, block.getSoundGroup().getPlaceSound(), SoundCategory.BLOCKS);
                 }
             }
+        }
+    }
+
+    @Override
+    public void onPlayerCollision(PlayerEntity player) {
+        super.onPlayerCollision(player);
+        if (!world.isClient) {
+            //TODO probably more damage bzw scale with difficuzlty
+            player.damage(DamageSource.fallingBlock(shooter),5.0f);
         }
     }
 
@@ -70,5 +84,16 @@ public abstract class FallingBlockEntityMixin extends Entity implements BiggerFa
     @Override
     public void setScaleSize(float v) {
         this.dataTracker.set(SIZE, v);
+    }
+
+    @Override
+    public void setShooter(@Nullable Entity entity) {
+        this.shooter = entity;
+    }
+
+    @Nullable
+    @Override
+    public Entity getShooter() {
+        return shooter;
     }
 }

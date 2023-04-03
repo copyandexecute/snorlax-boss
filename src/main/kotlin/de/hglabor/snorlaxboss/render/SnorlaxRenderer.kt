@@ -5,8 +5,10 @@ import de.hglabor.snorlaxboss.render.model.SnorlaxModel
 import net.minecraft.client.render.VertexConsumerProvider
 import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.util.math.MatrixStack
+import net.minecraft.item.BlockItem
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.registry.Registries
 import net.minecraft.util.math.RotationAxis
 import software.bernie.geckolib.cache.`object`.GeoBone
 import software.bernie.geckolib.renderer.GeoEntityRenderer
@@ -22,8 +24,14 @@ class SnorlaxRenderer(renderManager: EntityRendererFactory.Context) :
 
     private class SnorlaxItemAndBlockRenderer(renderer: SnorlaxRenderer) : BlockAndItemGeoLayer<Snorlax>(renderer) {
         override fun getStackForBone(bone: GeoBone, animatable: Snorlax): ItemStack? {
+            //TODO tbh kinda scuffed aber it does its job wa
+            val mainHandStack = animatable.mainHandStack
+            if (animatable.attack == Snorlax.Attack.PICKUP_AND_THROW_BLOCK && bone.name.equals("between_arm",true)) {
+                return mainHandStack
+            }
+
             return when (bone.name.lowercase()) {
-                "left_fingers" -> animatable.mainHandStack
+                "left_fingers" -> if (mainHandStack.isFood) animatable.mainHandStack else null
                 else -> null
             }
         }
@@ -43,6 +51,12 @@ class SnorlaxRenderer(renderManager: EntityRendererFactory.Context) :
                 poseStack.scale(scale, scale, scale)
                 poseStack.translate(0f, -0.1f, 0f)
                 poseStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-90f))
+            } else if (stack.item is BlockItem) {
+                val scale = 1f
+                poseStack.scale(scale, scale, scale)
+                poseStack.translate(-0f, -0.3f, 0f)
+                //poseStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-90f))
+               // poseStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90f))
             }
             super.renderStackForBone(
                 poseStack,
