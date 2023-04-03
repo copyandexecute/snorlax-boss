@@ -1,6 +1,7 @@
 package de.hglabor.snorlaxboss.mixin.entity;
 
 import de.hglabor.snorlaxboss.entity.BiggerFallingBlock;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
@@ -9,14 +10,18 @@ import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(FallingBlockEntity.class)
 public abstract class FallingBlockEntityMixin extends Entity implements BiggerFallingBlock {
+    @Shadow
+    private BlockState block;
     private static final TrackedData<Float> SIZE = DataTracker.registerData(FallingBlockEntity.class, TrackedDataHandlerRegistry.FLOAT);
 
     public FallingBlockEntityMixin(EntityType<?> type, World world) {
@@ -35,6 +40,21 @@ public abstract class FallingBlockEntityMixin extends Entity implements BiggerFa
         EntityDimensions entityDimensions = super.getDimensions(pose);
         float f = (entityDimensions.width + 0.2F * this.getScaleSize()) / entityDimensions.width;
         return entityDimensions.scaled(f);
+    }
+
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/FallingBlockEntity;discard()V"))
+    private void tickInjection(CallbackInfo ci) {
+        if (getScaleSize() == 0) return;
+        var size = this.getScaleSize() / 5;
+        for (int x = 0; x < size; x++) {
+            for (int y = 0; y < size; y++) {
+                for (int z = 0; z < size; z++) {
+                    var blockPos = getBlockPos().add(x, y, z);
+                    world.setBlockState(blockPos, block);
+                    world.playSound(null,blockPos,block.getSoundGroup().getPlaceSound(), SoundCategory.BLOCKS);
+                }
+            }
+        }
     }
 
     @Inject(method = "initDataTracker", at = @At("TAIL"))
