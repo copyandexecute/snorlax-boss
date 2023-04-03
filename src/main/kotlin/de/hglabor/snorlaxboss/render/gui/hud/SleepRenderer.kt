@@ -2,6 +2,7 @@ package de.hglabor.snorlaxboss.render.gui.hud
 
 import com.mojang.blaze3d.systems.RenderSystem
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
+import de.hglabor.snorlaxboss.gui.screen.ForceSleepingScreen
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawableHelper
 import net.minecraft.client.util.math.MatrixStack
@@ -22,6 +23,18 @@ object SleepRenderer {
             RenderSystem.enableDepthTest()
             client.profiler.pop()
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f)
+        }
+    }
+
+    fun MinecraftClient.startSleepScreen() {
+        if ((player as? ModifiedPlayer?)?.isForceSleeping == true && world != null) {
+            setScreen(ForceSleepingScreen())
+        }
+    }
+
+    fun MinecraftClient.stopSleepScreen() {
+        if (currentScreen is ForceSleepingScreen && (player as? ModifiedPlayer?)?.isForceSleeping == false) {
+            setScreen(null)
         }
     }
 }
