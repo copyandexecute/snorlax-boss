@@ -38,6 +38,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
 import net.minecraft.nbt.NbtCompound
 import net.minecraft.particle.BlockStateParticleEffect
+import net.minecraft.particle.ItemStackParticleEffect
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.registry.tag.BlockTags
 import net.minecraft.server.network.ServerPlayerEntity
@@ -98,6 +99,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         get() = this.dataTracker.get(THROWING)
         set(value) = this.dataTracker.set(THROWING, value)
 
+    var isEating: Boolean
+        get() = this.dataTracker.get(EATING)
+        set(value) = this.dataTracker.set(EATING, value)
+
+    var isPickingUpFood: Boolean
+        get() = this.dataTracker.get(PICKUPFOOD)
+        set(value) = this.dataTracker.set(PICKUPFOOD, value)
+
     var isMoving: Boolean
         get() = this.dataTracker.get(MOVING)
         set(value) {
@@ -145,6 +154,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP_AND_THROW("pickup".hold(), Snorlax::PickUpAndThrowTask),
         YAWN("idle".loop(), Snorlax::YawnTask),
+        EAT("idle".loop(), Snorlax::EatTask),
 
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
@@ -178,6 +188,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val MOVING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val JUMPING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val THROWING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val EATING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val PICKUPFOOD = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
 
 
@@ -226,6 +238,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         dataTracker.startTracking(MOVING, false)
         dataTracker.startTracking(JUMPING, false)
         dataTracker.startTracking(THROWING, false)
+        dataTracker.startTracking(EATING, false)
+        dataTracker.startTracking(PICKUPFOOD, false)
     }
 
     override fun readCustomDataFromNbt(nbt: NbtCompound) {
@@ -620,11 +634,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
-    inner class RollTask : RunTask() {
+    inner class RollTask : RunTask(0.0) {
         override fun onEnable() {
             super.onEnable()
             isRolling = true
-            speed = 0.0
         }
 
         override fun tick() {
@@ -638,9 +651,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
-    open inner class RunTask : Task() {
-        private var targetPos: Vec3d = Vec3d.ZERO
-        protected var speed = 2.0
+    open inner class RunTask(var speed: Double = 2.0, val distanceToReach: Double = 9.0) : Task() {
+        protected var targetPos: Vec3d = Vec3d.ZERO
+        protected var shouldMove = true
 
         override fun onEnable() {
             isMoving = true
@@ -648,15 +661,21 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun tick() {
-            if (targetPos != Vec3d.ZERO) {
-                if (squaredDistanceTo(targetPos) > 9) {
-                    moveControl.moveTo(targetPos.x, targetPos.y, targetPos.z, speed)
+            if (shouldMove) {
+                if (targetPos != Vec3d.ZERO) {
+                    if (squaredDistanceTo(targetPos) > distanceToReach) {
+                        moveControl.moveTo(targetPos.x, targetPos.y, targetPos.z, speed)
+                    } else {
+                        reachedSpot()
+                    }
                 } else {
                     isFinished = true
                 }
-            } else {
-                isFinished = true
             }
+        }
+
+        open fun reachedSpot() {
+            isFinished = true
         }
 
         override fun onDisable() {
@@ -940,6 +959,66 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    inner class EatTask : RunTask(distanceToReach = 3.0) {
+        private var itemEntity: ItemEntity? = null
+        override fun onEnable() {
+            //TODO food ist in erde und er springt -> boden attacke
+            //TODO generell wenns zu lange dauert und ers nid findet
+            val items =
+                world.getOtherEntities(this@Snorlax, boundingBox.expand(15.0)) { it is ItemEntity && it.stack.isFood }
+            isMoving = true
+            itemEntity = items.randomOrNull() as? ItemEntity?
+            targetPos = itemEntity?.pos ?: Vec3d.ZERO
+        }
+
+        override fun reachedSpot() {
+            isMoving = false
+            shouldMove = false
+            isPickingUpFood = true
+            playSound(SoundEvents.ENTITY_ITEM_PICKUP, 1f, 1f)
+            val itemStack = itemEntity?.stack
+            equipStack(EquipmentSlot.MAINHAND, itemStack)
+            itemEntity?.discard()
+            mcCoroutineTask(delay = 360.milliseconds) {
+                isPickingUpFood = false
+                isEating = true
+
+                jobs += infiniteMcCoroutineTask(period = 5.ticks) {
+                    playSound(
+                        itemStack?.eatSound,
+                        0.5f + 0.5f * random.nextInt(2).toFloat(),
+                        (random.nextFloat() - random.nextFloat()) * 0.2f + 1.0f
+                    )
+                    spawnItemParticles(itemStack, 16)
+                }
+
+                mcCoroutineTask(delay = 1.seconds) {
+                    equipStack(EquipmentSlot.MAINHAND, Items.AIR.defaultStack)
+                    isEating = false
+                    isFinished = true
+                }
+            }
+        }
+    }
+
+    private fun spawnItemParticles(stack: ItemStack?, count: Int) {
+        for (i in 0 until count) {
+            val offSet = 0.3
+            val pos = eyePos.add(directionVector.normalize().subtract(0.0, 0.3, 0.0).multiply(2.0))
+            (world as? ServerWorld?)?.spawnParticles(
+                ItemStackParticleEffect(ParticleTypes.ITEM, stack),
+                pos.x + Random.nextDouble(-offSet, offSet),
+                pos.y + Random.nextDouble(-offSet, offSet),
+                pos.z + Random.nextDouble(-offSet, offSet),
+                0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            )
+        }
+    }
+
     inner class BellyFlopTask : Task() {
         override fun onEnable() {
             if (target == null) {
@@ -1035,6 +1114,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             .add(AnimationController(this, "rolling", 0, this::rollingController))
             .add(AnimationController(this, "walking", 0, this::walkingController))
             .add(AnimationController(this, "throwing", 0, this::throwingController))
+            .add(AnimationController(this, "eating", 0, this::eatingController))
     }
 
     private fun <T : GeoAnimatable> spinningController(state: AnimationState<T>): PlayState {
@@ -1060,6 +1140,20 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return state.setAndContinue("throw".hold())
         } else {
             state.controller.forceAnimationReset()
+        }
+        return PlayState.STOP
+    }
+
+
+    private fun <T : GeoAnimatable> eatingController(state: AnimationState<T>): PlayState {
+        if (isPickingUpFood) {
+            return state.setAndContinue("pickup-food".hold())
+        } else {
+            if (isEating) {
+                return state.setAndContinue("eating".play())
+            } else {
+                state.controller.forceAnimationReset()
+            }
         }
         return PlayState.STOP
     }
