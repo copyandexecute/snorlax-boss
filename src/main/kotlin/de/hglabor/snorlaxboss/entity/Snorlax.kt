@@ -1062,7 +1062,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             }.next()
         }
     }
-    inner class InhaleTask : Task("Inhale") {
+    inner class InhaleTask : Task() {
         private val prepareTime = 1.seconds
         private var isPreparing = true
 
