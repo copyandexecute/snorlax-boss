@@ -1052,7 +1052,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
-    inner class EatTask : RunTask(distanceToReach = 3.0) {
+    inner class EatTask : RunTask(distanceToReach = 6.0) {
         private var itemEntity: ItemEntity? = null
         override fun onEnable() {
             //TODO food ist in erde und er springt -> boden attacke
@@ -1086,6 +1086,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
 
                 mcCoroutineTask(delay = 1.seconds) {
+                    val hunger = itemStack?.item?.foodComponent?.hunger ?: 1
+                    heal(hunger * 1f)
                     equipStack(EquipmentSlot.MAINHAND, Items.AIR.defaultStack)
                     isEating = false
                     isFinished = true
