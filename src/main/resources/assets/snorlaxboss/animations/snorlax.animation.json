@@ -555,6 +555,38 @@
 					}
 				}
 			}
+		},
+		"animation.hglabor.bodycheck": {
+			"animation_length": 1.12,
+			"bones": {
+				"root": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"0.44": {
+							"vector": [0, -75, 0],
+							"easing": "easeOutCirc"
+						},
+						"0.56": {
+							"vector": [0, 0, 0],
+							"easing": "easeOutCubic"
+						}
+					},
+					"position": {
+						"0.44": {
+							"vector": [0, 0, 0]
+						},
+						"1.0": {
+							"vector": [0, 0, -8],
+							"easing": "easeOutQuint"
+						},
+						"1.12": {
+							"vector": [0, 0, 0]
+						}
+					}
+				}
+			}
 		}
 	},
 	"geckolib_format_version": 2
