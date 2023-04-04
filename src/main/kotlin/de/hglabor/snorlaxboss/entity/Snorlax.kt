@@ -114,6 +114,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         get() = this.dataTracker.get(PICKUPFOOD)
         set(value) = this.dataTracker.set(PICKUPFOOD, value)
 
+    var isBodyChecking: Boolean
+        get() = this.dataTracker.get(BODYCHECK)
+        set(value) = this.dataTracker.set(BODYCHECK, value)
+
     var isMoving: Boolean
         get() = this.dataTracker.get(MOVING)
         set(value) {
@@ -161,8 +165,11 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP_AND_THROW_PLAYER("pickup".hold(), Snorlax::PickUpAndThrowPlayer),
         PICKUP_AND_THROW_BLOCK("pickup-block".hold(), Snorlax::PickUpAndThrowBlock),
+
+        //At this point mach ich eh alles über idle und controller sau dumm nächstes mal animationen anders machen
         YAWN("idle".loop(), Snorlax::YawnTask),
         EAT("idle".loop(), Snorlax::EatTask),
+        BODYCHECK("idle".play(), Snorlax::BodyCheckTask),
 
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
@@ -199,6 +206,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         private val THROWING_BLOCK = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val EATING = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
         private val PICKUPFOOD = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
+        private val BODYCHECK = DataTracker.registerData(Snorlax::class.java, TrackedDataHandlerRegistry.BOOLEAN)
     }
 
 
@@ -241,6 +249,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     override fun initDataTracker() {
         super.initDataTracker()
         dataTracker.startTracking(ATTACK, Attack.IDLE)
+        dataTracker.startTracking(BODYCHECK, false)
         dataTracker.startTracking(IS_DEBUG, false)
         dataTracker.startTracking(SPINNING, false)
         dataTracker.startTracking(ROLLING, false)
@@ -1052,6 +1061,26 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    inner class BodyCheckTask : RunTask(speed = 2.5) {
+        override fun reachedSpot() {
+            isMoving = false
+            shouldMove = false
+            isBodyChecking = true
+            //Animation Delay
+            mcCoroutineTask(delay = 480.milliseconds) {
+                val direction = directionVector.normalize().multiply(2.0)
+                world.getOtherEntities(this@Snorlax, boundingBox.expand(4.5)).forEach {
+                    tryAttackWithShieldBreak(it)
+                    it.modifyVelocity(Vec3d(direction.x, Random.nextDouble(1.0, 2.0), direction.z))
+                }
+            }
+            mcCoroutineTask(delay = 1200.milliseconds) {
+                isBodyChecking = false
+                isFinished = true
+            }
+        }
+    }
+
     inner class EatTask : RunTask(distanceToReach = 6.0) {
         private var itemEntity: ItemEntity? = null
         override fun onEnable() {
@@ -1212,6 +1241,16 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             .add(AnimationController(this, "throwing-block", 0, this::throwingBlockController))
             .add(AnimationController(this, "eating", 0, this::eatingController))
             .add(AnimationController(this, "dieing", 0, this::dieingController))
+            .add(AnimationController(this, "bodycheck", 0, this::bodycheckController))
+    }
+
+    private fun <T : GeoAnimatable> bodycheckController(state: AnimationState<T>): PlayState {
+        if (isBodyChecking) {
+            return state.setAndContinue("bodycheck".play())
+        } else {
+            state.controller.forceAnimationReset()
+        }
+        return PlayState.STOP
     }
 
     private fun <T : GeoAnimatable> dieingController(state: AnimationState<T>): PlayState {
