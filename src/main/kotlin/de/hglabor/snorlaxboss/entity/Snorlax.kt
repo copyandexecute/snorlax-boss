@@ -1062,6 +1062,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             }.next()
         }
     }
+
     inner class InhaleTask : Task() {
         private val prepareTime = 1.seconds
         private var isPreparing = true
@@ -1093,7 +1094,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             mcCoroutineTask(delay = prepareTime) {
                 isPreparing = false
                 lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
-                Attacks.inhale(this@Snorlax, target = target!!)
+                Attacks.inhale(this@Snorlax)
             }
 
             mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
