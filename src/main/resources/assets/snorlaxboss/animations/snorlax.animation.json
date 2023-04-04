@@ -471,6 +471,29 @@
 				}
 			}
 		},
+		"animation.hglabor.inhale": {
+			"animation_length": 7.48,
+			"bones": {
+				"body": {
+					"rotation": {
+						"0.0": [0, "Math.cos(query.anim_time * 500) * 10 -0.5", 0],
+						"0.56": [0, "Math.cos(query.anim_time * 700 ) * 5  -0.5", 0]
+					}
+				},
+				"head": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.44": [-2.5, 0, 0]
+					}
+				},
+				"arms": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.44": [-142.5, 0, 0]
+					}
+				}
+			}
+		},
 		"animation.hglabor.eating": {
 			"loop": true,
 			"bones": {

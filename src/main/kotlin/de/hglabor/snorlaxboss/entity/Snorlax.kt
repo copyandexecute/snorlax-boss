@@ -165,15 +165,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP_AND_THROW_PLAYER("pickup".hold(), Snorlax::PickUpAndThrowPlayer),
         PICKUP_AND_THROW_BLOCK("pickup-block".hold(), Snorlax::PickUpAndThrowBlock),
-
         //At this point mach ich eh alles über idle und controller sau dumm nächstes mal animationen anders machen
         YAWN("idle".loop(), Snorlax::YawnTask),
         EAT("idle".loop(), Snorlax::EatTask),
         BODYCHECK("idle".play(), Snorlax::BodyCheckTask),
-
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
         JUMP("jump".hold(), Snorlax::JumpTask);
+        INHALE("inhale".play(), Snorlax::InhaleTask);
     }
 
     companion object {
@@ -790,6 +789,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Attack {
+            if(time >= 200)
+                return Attack.INHALE
             return weightedCollection {
                 if (target == null) {
                     100.0 to Attack.CHECK_TARGET
@@ -1059,6 +1060,57 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 48.0 to Attack.RUN
                 4.0 to Attack.SLEEP
             }.next()
+        }
+    }
+    inner class InhaleTask : Task("Inhale") {
+        private val prepareTime = 1.seconds
+        private var isPreparing = true
+
+        override fun onEnable() {
+            lookAtEntity(target, 90f, 90f)
+
+            sound(SoundManager.INHALE, 5f, 1f)
+
+            jobs += infiniteMcCoroutineTask {
+                if (isPreparing) {
+                    lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                    val pos = eyePos.add(directionVector.normalize().multiply(3.0))
+
+                    (world as? ServerWorld?)?.spawnParticles(
+                        ParticleTypes.CLOUD,
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                        1,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
+                }
+            }
+
+            mcCoroutineTask(delay = prepareTime) {
+                isPreparing = false
+                lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, target!!.pos)
+                Attacks.inhale(this@Snorlax, target = target!!)
+            }
+
+            mcCoroutineTask(delay = Random.nextInt(5, 10).seconds) {
+                isFinished = true
+            }
+        }
+
+        override fun nextTask(): Attack {
+            // Er muss schlafen, weil seine ganze Luft raus ist und keine Energie mehr hat
+            return Attack.SLEEP
+            /*
+            return weightedCollection {
+                48.0 to Attack.CHECK_TARGET
+                48.0 to Attack.RUN
+                4.0 to Attack.SLEEP
+            }.next()
+            */
         }
     }
 

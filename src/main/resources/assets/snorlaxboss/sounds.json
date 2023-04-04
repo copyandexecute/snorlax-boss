@@ -38,5 +38,10 @@
     "sounds": [
       "snorlaxboss:searching_left"
     ]
+  },
+  "inhale": {
+    "sounds": [
+      "snorlaxboss:inhale"
+    ]
   }
 }
