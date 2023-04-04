@@ -1211,6 +1211,16 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             .add(AnimationController(this, "throwing-entity", 0, this::throwingEntityController))
             .add(AnimationController(this, "throwing-block", 0, this::throwingBlockController))
             .add(AnimationController(this, "eating", 0, this::eatingController))
+            .add(AnimationController(this, "dieing", 0, this::dieingController))
+    }
+
+    private fun <T : GeoAnimatable> dieingController(state: AnimationState<T>): PlayState {
+        if (isDead) {
+            return state.setAndContinue("sleep".once().loop("sleep-idle"))
+        } else {
+            state.controller.forceAnimationReset()
+        }
+        return PlayState.STOP
     }
 
     private fun <T : GeoAnimatable> spinningController(state: AnimationState<T>): PlayState {
