@@ -171,7 +171,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         BODYCHECK("idle".play(), Snorlax::BodyCheckTask),
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
-        JUMP("jump".hold(), Snorlax::JumpTask);
+        JUMP("jump".hold(), Snorlax::JumpTask),
         INHALE("inhale".play(), Snorlax::InhaleTask);
     }
 
