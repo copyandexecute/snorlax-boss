@@ -168,7 +168,7 @@ object Attacks {
             }
 
             val entitesToRemove = mutableSetOf<Entity>()
-            
+
             entitesToInhale.addAll(world.getOtherEntities(livingEntity, Box.from(eyePos).expand(3.0)))
             entitesToInhale.forEach {
                 particle.spawn(it.eyePos)
@@ -223,6 +223,11 @@ object Attacks {
                     world.spawnParticles(
                         particle, particlePos.x + yOffset, particlePos.y + yOffset, particlePos.z, 0, 0.0, 0.0, 0.0, 0.0
                     )
+                    if (count == 2) {
+                        world.getOtherEntities(livingEntity,livingEntity.boundingBox.expand(2.0)).forEach {
+                            livingEntity.tryAttack(it)
+                        }
+                    }
                 }
             }
         }
