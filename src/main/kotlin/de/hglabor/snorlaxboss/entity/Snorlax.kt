@@ -766,6 +766,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             if (shouldMove) {
                 if (targetPos != Vec3d.ZERO) {
                     if (squaredDistanceTo(targetPos) > distanceToReach) {
+                        //TODO handle water
                         moveControl.moveTo(targetPos.x, targetPos.y, targetPos.z, speed)
                     } else {
                         reachedSpot()
