@@ -500,6 +500,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 projectileEntity.velocity = reflect.multiply(x, y, z)
 
                 ci.cancel()
+            } else if (isMoving) {
+                projectileEntity.velocity = Vec3d.ZERO
+                ci.cancel()
             }
         }
     }
