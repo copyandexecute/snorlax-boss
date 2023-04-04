@@ -789,8 +789,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Attack {
-            if(time >= 200)
-                return Attack.INHALE
+            /*if(time >= 200)
+                return Attack.INHALE*/
             return weightedCollection {
                 if (target == null) {
                     100.0 to Attack.CHECK_TARGET
