@@ -110,8 +110,12 @@ object Attacks {
             }
         }
 
+        var counter = 0
+
         val job = infiniteMcCoroutineTask(period = 1.ticks) {
-            particle.spawn(eyePos)
+            if (counter.mod(2) == 0) {
+                particle.spawn(eyePos)
+            }
             positions.forEachIndexed { index, vec3d ->
                 mcCoroutineTask(delay = index.ticks) {
                     world
@@ -125,6 +129,7 @@ object Attacks {
 
             eyePos = eyePos.add(dir)
             positions += eyePos
+            counter++
         }
 
         mcCoroutineTask(delay = duration) { job.cancel() }
