@@ -301,6 +301,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             //TODO ich weiß nicht ob das mal probleme macht
             //das ist dafür da dass auf dem client der task gesycned ist und die hitbox geupdatet wird nach x sekunden z.b. beim bellytask
             //attack = attack
+            forceAnimationReset = true
             calculateDimensions()
         }
     }
@@ -609,6 +610,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             )
             equipStack(EquipmentSlot.MAINHAND, Items.AIR.defaultStack)
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                70.0 to Attack.PICKUP_AND_THROW_BLOCK
+                10.0 to Attack.BODYCHECK
+                10.0 to Attack.ROLL
+                10.0 to Attack.RUN
+            }.next()
+        }
     }
 
     //lecker pickup
@@ -627,6 +637,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 }
             }
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                50.0 to Attack.JUMP
+                20.0 to Attack.PICKUP_AND_THROW_BLOCK
+                20.0 to Attack.SLEEP
+                10.0 to Attack.CHECK_TARGET
+            }.next()
+        }
     }
 
     inner class SleepTask : Task() {
@@ -644,7 +663,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                80.0 to Attack.CHECK_TARGET
+                60.0 to Attack.CHECK_TARGET
+                20.0 to Attack.YAWN
                 20.0 to Attack.RUN
             }.next()
         }
@@ -694,6 +714,14 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 player.isForceSleeping = true
             }
         }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                50.0 to Attack.RUN
+                30.0 to Attack.PICKUP_AND_THROW_BLOCK
+                20.0 to Attack.CHECK_TARGET
+            }.next()
+        }
     }
 
     inner class JumpTask : Task() {
@@ -720,8 +748,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                90.0 to Attack.RUN
-                10.0 to Attack.SLEEP
+                40.0 to Attack.RUN
+                30.0 to Attack.ROLL
+                20.0 to Attack.BODYCHECK
+                20.0 to Attack.YAWN
             }.next()
         }
     }
@@ -759,6 +789,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onDisable() {
             super.onDisable()
             isRolling = false
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                60.0 to Attack.JUMP
+                20.0 to Attack.BELLY_FLOP
+                10 to Attack.CHECK_TARGET
+                10 to Attack.PICKUP_AND_THROW_PLAYER
+            }.next()
         }
     }
 
@@ -798,8 +837,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Attack {
-            /*if(time >= 200)
-                return Attack.INHALE*/
             return weightedCollection {
                 if (target == null) {
                     100.0 to Attack.CHECK_TARGET
@@ -807,7 +844,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     40.0 to Attack.MULTIPLE_PUNCH
                     30.0 to Attack.PUNCH
                     12.0 to Attack.JUMP
+                    12.0 to Attack.PICKUP_AND_THROW_PLAYER
                     12.0 to Attack.BELLY_FLOP
+                    6.0 to Attack.YAWN
                     5.0 to Attack.SHAKING
                     1.0 to Attack.BEAM
                 }
@@ -842,6 +881,8 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     100.0 to Attack.IDLE
                 } else {
                     70.0 to Attack.RUN
+                    30.0 to Attack.ROLL
+                    30.0 to Attack.BODYCHECK
                     if (health <= maxHealth / 2) {
                         30.0 to Attack.SLEEP
                     } else {
@@ -869,7 +910,10 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun nextTask(): Attack {
             return weightedCollection {
                 if (target != null) {
-                    100.0 to Attack.RUN
+                    30.0 to Attack.RUN
+                    30.0 to Attack.BODYCHECK
+                    30.0 to Attack.ROLL
+                    5.0 to Attack.PICKUP_AND_THROW_BLOCK
                 } else {
                     80.0 to Attack.CHECK_TARGET
                     20.0 to Attack.SLEEP
@@ -929,15 +973,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
 
         override fun nextTask(): Attack {
-            return weightedCollection {
-                if (target != null) {
-                    75.0 to Attack.PUNCH
-                    20.0 to Attack.JUMP
-                    5.0 to Attack.SHAKING
-                } else {
-                    100.0 to Attack.CHECK_TARGET
-                }
-            }.next()
+            return Attack.EAT
         }
     }
 
@@ -1072,6 +1108,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    //TODO war eig gedacht dass wenn es zu lange dauert er einen aufsaugt jo
     inner class InhaleTask : Task() {
         private val prepareTime = 1.seconds
         private var isPreparing = true
@@ -1114,13 +1151,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun nextTask(): Attack {
             // Er muss schlafen, weil seine ganze Luft raus ist und keine Energie mehr hat
             return Attack.SLEEP
-            /*
-            return weightedCollection {
-                48.0 to Attack.CHECK_TARGET
-                48.0 to Attack.RUN
-                4.0 to Attack.SLEEP
-            }.next()
-            */
         }
     }
 
@@ -1141,6 +1171,15 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 isBodyChecking = false
                 isFinished = true
             }
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                50.0 to Attack.PICKUP_AND_THROW_BLOCK
+                20.0 to Attack.INHALE
+                20.0 to Attack.BODYCHECK
+                10.0 to Attack.BEAM
+            }.next()
         }
     }
 
@@ -1185,6 +1224,17 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     isFinished = true
                 }
             }
+        }
+
+        override fun nextTask(): Attack {
+            return weightedCollection {
+                if (health < maxHealth) {
+                    50.0 to Attack.EAT
+                    50.0 to Attack.CHECK_TARGET
+                } else {
+                    100.0 to Attack.SLEEP
+                }
+            }.next()
         }
     }
 
