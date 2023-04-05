@@ -53,9 +53,11 @@ object Attacks {
                     //TODO jop das problem ist hier wenn der erdbeben in höhle macht wird immer top position geused eig dumm aber mir egal fighte halt einfach immer oben
                     world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, it).down()
                 }.forEach { pos ->
-                    val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
-                    fallingBlocks += fallingBlockEntity
-                    fallingBlockEntity.modifyVelocity(0, 0.5, 0)
+                    if (Random.nextBoolean()) {
+                        val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, world.getBlockState(pos))
+                        fallingBlocks += fallingBlockEntity
+                        fallingBlockEntity.modifyVelocity(0, 0.5, 0)
+                    }
                 }
                 val affectedEntities = mutableSetOf<Entity>()
                 for (block in fallingBlocks) {
