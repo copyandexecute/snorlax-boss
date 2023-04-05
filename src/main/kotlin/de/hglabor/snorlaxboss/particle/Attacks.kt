@@ -165,7 +165,7 @@ object Attacks {
         val job = infiniteMcCoroutineTask(period = 1.ticks) {
             Vec3i(eyePos.x, eyePos.y, eyePos.z).filledSpherePositionSet(3).forEach {
                 val blockState = world.getBlockState(it)
-                if (!blockState.isAir) {
+                if (!blockState.isAir && Random.nextBoolean()) {
                     val fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, it, blockState)
                     fallingBlockEntity.dropItem = false
                     fallingBlockEntity.setHurtEntities(1F, 5)
