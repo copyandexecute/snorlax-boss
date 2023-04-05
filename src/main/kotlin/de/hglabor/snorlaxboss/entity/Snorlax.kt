@@ -17,7 +17,6 @@ import kotlinx.coroutines.cancel
 import net.minecraft.block.BlockRenderType
 import net.minecraft.block.BlockState
 import net.minecraft.block.Blocks
-import net.minecraft.client.particle.BlockDustParticle
 import net.minecraft.command.argument.EntityAnchorArgumentType
 import net.minecraft.entity.*
 import net.minecraft.entity.ai.control.MoveControl
@@ -58,7 +57,6 @@ import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.math.geometry.filledSpherePositionSet
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.task.mcCoroutineTask
-import net.silkmc.silk.core.text.broadcastText
 import net.silkmc.silk.core.text.literal
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import software.bernie.geckolib.animatable.GeoEntity
@@ -165,10 +163,12 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         BELLY_FLOP("belly-flop".hold(), Snorlax::BellyFlopTask),
         PICKUP_AND_THROW_PLAYER("pickup".hold(), Snorlax::PickUpAndThrowPlayer),
         PICKUP_AND_THROW_BLOCK("pickup-block".hold(), Snorlax::PickUpAndThrowBlock),
+
         //At this point mach ich eh alles über idle und controller sau dumm nächstes mal animationen anders machen
         YAWN("idle".loop(), Snorlax::YawnTask),
         EAT("idle".loop(), Snorlax::EatTask),
         BODYCHECK("idle".play(), Snorlax::BodyCheckTask),
+
         //THROW_PLAYER("throw".hold(), Snorlax::ThrowPlayerTask),
         SLEEP("sleep".once().loop("sleep-idle"), Snorlax::SleepTask),
         JUMP("jump".hold(), Snorlax::JumpTask),
@@ -539,6 +539,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
                 mcCoroutineTask(delay = 250.milliseconds) {
                     throwBlock()
+                    playSoundAtEyePos(SoundManager.THROW)
                 }
 
                 mcCoroutineTask(delay = 500.milliseconds) {
@@ -649,24 +650,33 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         }
     }
 
+    fun playSoundAtEyePos(soundEvent: SoundEvent) {
+        world.playSound(null, eyePos.x, eyePos.y, eyePos.z, soundEvent, SoundCategory.HOSTILE, 1f, 1f)
+    }
+
+    fun yawn() {
+        val pos = eyePos.add(directionVector.normalize().subtract(0.0, 0.3, 0.0).multiply(2.0))
+        val serverWorld = world as? ServerWorld?
+        playSoundAtEyePos(SoundManager.YAWN)
+        repeat(20) {
+            serverWorld?.spawnParticles(
+                SnorlaxBossParticles.YAWN,
+                pos.x,
+                pos.y,
+                pos.z,
+                1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            )
+        }
+    }
+
     inner class YawnTask : Task() {
         override fun onEnable() {
-            val pos = eyePos.add(directionVector.normalize().subtract(0.0, 0.3, 0.0).multiply(2.0))
-            val serverWorld = world as? ServerWorld?
             makePlayersSleepy()
-            repeat(20) {
-                serverWorld?.spawnParticles(
-                    SnorlaxBossParticles.YAWN,
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    1,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                )
-            }
+            yawn()
         }
 
         private fun makePlayersSleepy() {
@@ -782,7 +792,6 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun onDisable() {
             super.onDisable()
-            server?.broadcastText("Disabled running pos: $targetPos") { }
             isMoving = false
             targetPos = Vec3d.ZERO
             (moveControl as SnorlaxMoveControl).jumpTry = 0

@@ -43,5 +43,15 @@
     "sounds": [
       "snorlaxboss:inhale"
     ]
+  },
+  "throw": {
+    "sounds": [
+      "snorlaxboss:throw"
+    ]
+  },
+  "yawn": {
+    "sounds": [
+      "snorlaxboss:yawn"
+    ]
   }
 }

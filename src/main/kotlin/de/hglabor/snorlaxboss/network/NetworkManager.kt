@@ -1,8 +1,6 @@
 package de.hglabor.snorlaxboss.network
 
 import de.hglabor.snorlaxboss.entity.Snorlax
-import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
-import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager.tryWakeUp
 import de.hglabor.snorlaxboss.extension.toId
 import de.hglabor.snorlaxboss.mixin.accessor.WorldAccessor
@@ -12,7 +10,6 @@ import de.hglabor.snorlaxboss.utils.UUIDWrapper
 import kotlinx.serialization.ExperimentalSerializationApi
 import net.minecraft.entity.data.TrackedDataHandler
 import net.minecraft.entity.data.TrackedDataHandlerRegistry
-import net.silkmc.silk.core.text.literal
 import net.silkmc.silk.network.packet.ClientPacketContext
 import net.silkmc.silk.network.packet.ServerToClientPacketDefinition
 import net.silkmc.silk.network.packet.c2sPacket
@@ -52,7 +49,6 @@ object NetworkManager {
         }
 
         TRY_WAKE_UP.receiveOnServer { _, context ->
-            context.player.sendMessage("Tried wake up".literal)
             context.player.tryWakeUp()
         }
     }

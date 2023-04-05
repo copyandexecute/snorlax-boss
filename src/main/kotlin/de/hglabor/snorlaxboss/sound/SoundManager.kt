@@ -15,6 +15,8 @@ object SoundManager {
     var EXCLAMATION_MARK = SoundEvent.of("exclamation_mark".toId()).register()
     var SEARCHING_LEFT = SoundEvent.of("searching_left".toId()).register()
     var INHALE = SoundEvent.of("inhale".toId()).register()
+    var YAWN = SoundEvent.of("yawn".toId()).register()
+    var THROW = SoundEvent.of("throw".toId()).register()
 
     fun init() {
     }

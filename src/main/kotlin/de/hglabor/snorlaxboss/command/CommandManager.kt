@@ -7,11 +7,11 @@ import de.hglabor.snorlaxboss.SnorlaxBoss.Companion.IS_DEVELOPMENT
 import de.hglabor.snorlaxboss.entity.EntityManager
 import de.hglabor.snorlaxboss.entity.Snorlax
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer
+import de.hglabor.snorlaxboss.extension.allFoodItems
 import de.hglabor.snorlaxboss.extension.randomMainInvItem
 import de.hglabor.snorlaxboss.particle.Attacks
-import kotlinx.coroutines.cancel
+import net.minecraft.block.Blocks
 import net.minecraft.enchantment.Enchantments
-import net.minecraft.entity.EntityPose
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.Items
@@ -20,13 +20,12 @@ import net.minecraft.potion.Potions
 import net.minecraft.registry.Registries
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.util.Identifier
-import net.minecraft.util.math.MathHelper
+import net.minecraft.util.math.BlockPos
 import net.silkmc.silk.commands.command
 import net.silkmc.silk.core.item.itemStack
 import net.silkmc.silk.core.item.setPotion
-import net.silkmc.silk.core.task.infiniteMcCoroutineTask
-import net.silkmc.silk.core.task.mcCoroutineTask
-import net.silkmc.silk.core.text.broadcastText
+import net.silkmc.silk.core.text.literal
+
 
 object CommandManager {
     fun init() {
@@ -50,11 +49,69 @@ object CommandManager {
                 }
             }
 
+            command("blockplacetest") {
+                runs {
+                    val playerOrThrow = this.source.playerOrThrow
+                    val pos = playerOrThrow.blockPos
+                    val size = 2
+                    for (x in 0 until size) {
+                        for (y in 0 until size) {
+                            for (z in 0 until size) {
+                                val blockPos: BlockPos = pos.add(x, y, z)
+                                this.source.world.setBlockState(blockPos, Blocks.DIAMOND_BLOCK.defaultState)
+                            }
+                        }
+                    }
+                }
+            }
+
+            command("food") {
+                literal("drop") {
+                    argument("value", IntegerArgumentType.integer(1)) { value ->
+                        runs {
+                            //this.source.playerOrThrow.dropRandomFood(value())
+                        }
+                    }
+                    runs {
+                        this.source.playerOrThrow.allFoodItems.forEach { (t, u) ->
+                            this.source.sendMessage("$t $u".literal)
+                        }
+                    }
+                }
+            }
+
+
             command("snorlax") {
+                literal("ride") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            this.source.playerOrThrow.startRiding(it,true)
+                        }
+                    }
+                }
                 literal("spinning") {
                     runs {
                         this.getAllSnorlax().forEach {
                             it.isSpinning = !it.isSpinning
+                        }
+                    }
+                }
+                literal("eating") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            it.isEating = !it.isEating
+                            if (it.isEating) {
+                                it.equipStack(EquipmentSlot.MAINHAND, Items.COOKED_BEEF.defaultStack)
+                            } else {
+                                it.equipStack(EquipmentSlot.MAINHAND, Items.AIR.defaultStack)
+                            }
+                        }
+                    }
+                }
+                literal("yawn") {
+                    runs {
+                        this.getAllSnorlax().forEach {
+                            it.yawn()
                         }
                     }
                 }
@@ -68,7 +125,7 @@ object CommandManager {
                 literal("throw") {
                     runs {
                         this.getAllSnorlax().forEach {
-                            it.isThrowing = !it.isThrowing
+                            it.isThrowingEntity = !it.isThrowingEntity
                         }
                     }
                 }
@@ -115,7 +172,10 @@ object CommandManager {
                     val player = this.source.playerOrThrow as ModifiedPlayer
                     player.setFlat(!player.isFlat())
                     if (player.isFlat()) {
+                        player.setNormalReach(3.0f)
                         player.setFlatJumps(0)
+                    } else {
+                        player.setNormalReach(4.5f)
                     }
                 }
             }
@@ -149,12 +209,11 @@ object CommandManager {
                         Attacks.inhale(
                             this.source.playerOrThrow,
                             Registries.PARTICLE_TYPE.get(identifier) as ParticleEffect,
-                            target = source.playerOrThrow
                         )
                     }
                 }
                 runs {
-                    Attacks.inhale(this.source.playerOrThrow, target = source.playerOrThrow)
+                    Attacks.inhale(this.source.playerOrThrow)
                 }
             }
         }
