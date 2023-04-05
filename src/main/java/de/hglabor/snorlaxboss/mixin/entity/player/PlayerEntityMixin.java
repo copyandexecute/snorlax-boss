@@ -3,7 +3,6 @@ package de.hglabor.snorlaxboss.mixin.entity.player;
 import de.hglabor.snorlaxboss.entity.damage.DamageManager;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayer;
 import de.hglabor.snorlaxboss.entity.player.ModifiedPlayerManager;
-import net.minecraft.client.render.entity.model.ParrotEntityModel;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;

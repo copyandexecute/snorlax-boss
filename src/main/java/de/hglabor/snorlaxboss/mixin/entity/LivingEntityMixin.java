@@ -10,7 +10,6 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.world.World;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;

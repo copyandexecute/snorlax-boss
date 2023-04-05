@@ -6,7 +6,6 @@ import de.hglabor.snorlaxboss.render.SnorlaxRenderer
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricEntityTypeBuilder
-import net.minecraft.client.render.entity.EntityRendererFactory
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityDimensions

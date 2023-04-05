@@ -13,7 +13,6 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;

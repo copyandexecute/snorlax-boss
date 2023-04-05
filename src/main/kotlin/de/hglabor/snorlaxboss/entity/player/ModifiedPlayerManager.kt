@@ -8,7 +8,6 @@ import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvents
 import net.minecraft.text.Text
 import net.silkmc.silk.core.annotations.ExperimentalSilkApi
-import net.silkmc.silk.core.text.literal
 
 object ModifiedPlayerManager {
     @OptIn(ExperimentalSilkApi::class)
