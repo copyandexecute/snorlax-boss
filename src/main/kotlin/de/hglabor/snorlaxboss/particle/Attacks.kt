@@ -46,7 +46,7 @@ object Attacks {
             }
 
         repeat(radius) { counter ->
-            if (counter % 2 == 0) return@repeat
+            if (counter % 3 == 0) return@repeat
             mcCoroutineTask(delay = counter.ticks) {
                 val fallingBlocks = mutableListOf<FallingBlockEntity>()
                 vec3i.circlePositionSet(counter).map {
