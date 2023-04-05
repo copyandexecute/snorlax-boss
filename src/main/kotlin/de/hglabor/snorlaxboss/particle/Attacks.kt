@@ -139,7 +139,7 @@ object Attacks {
         livingEntity: LivingEntity,
         particle: ParticleEffect = ParticleTypes.CLOUD,
         duration: Duration = 5.seconds,
-        maxDistance: Double = 45.0
+        maxDistance: Double = 30.0
     ) {
         var eyePos = livingEntity.eyePos
         val origin = eyePos
