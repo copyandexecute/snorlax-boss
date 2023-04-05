@@ -545,6 +545,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
                 mcCoroutineTask(delay = 500.milliseconds) {
                     isThrowingBlock = false
+                    isFinished = true
                 }
             }
         }
@@ -642,7 +643,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
             return weightedCollection {
                 50.0 to Attack.JUMP
                 20.0 to Attack.PICKUP_AND_THROW_BLOCK
-                20.0 to Attack.SLEEP
+                5.0 to Attack.SLEEP
                 10.0 to Attack.CHECK_TARGET
             }.next()
         }
@@ -697,6 +698,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onEnable() {
             makePlayersSleepy()
             yawn()
+            mcCoroutineTask(delay = 2.seconds) {
+                isFinished = true
+            }
         }
 
         private fun makePlayersSleepy() {
@@ -802,20 +806,20 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
     }
 
     open inner class RunTask(var speed: Double = 2.0, val distanceToReach: Double = 9.0) : Task() {
-        protected var targetPos: Vec3d = Vec3d.ZERO
+        protected var runTarget: Entity? = null
         protected var shouldMove = true
 
         override fun onEnable() {
             isMoving = true
-            targetPos = target?.pos ?: Vec3d.ZERO
+            runTarget = target
         }
 
         override fun tick() {
             if (shouldMove) {
-                if (targetPos != Vec3d.ZERO) {
-                    if (squaredDistanceTo(targetPos) > distanceToReach) {
+                if (runTarget != null) {
+                    if (squaredDistanceTo(runTarget) > distanceToReach) {
                         //TODO handle water
-                        moveControl.moveTo(targetPos.x, targetPos.y, targetPos.z, speed)
+                        moveControl.moveTo(runTarget!!.x, runTarget!!.y, runTarget!!.z, speed)
                     } else {
                         reachedSpot()
                     }
@@ -832,7 +836,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
         override fun onDisable() {
             super.onDisable()
             isMoving = false
-            targetPos = Vec3d.ZERO
+            runTarget = null
             (moveControl as SnorlaxMoveControl).jumpTry = 0
         }
 
@@ -884,9 +888,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     30.0 to Attack.ROLL
                     30.0 to Attack.BODYCHECK
                     if (health <= maxHealth / 2) {
-                        30.0 to Attack.SLEEP
+                        15.0 to Attack.SLEEP
                     } else {
-                        10.0 to Attack.SLEEP
+                        5.0 to Attack.SLEEP
                     }
                     20.0 to Attack.BEAM
                 }
@@ -916,7 +920,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     5.0 to Attack.PICKUP_AND_THROW_BLOCK
                 } else {
                     80.0 to Attack.CHECK_TARGET
-                    20.0 to Attack.SLEEP
+                    10.0 to Attack.SLEEP
                 }
             }.next()
         }
@@ -1015,9 +1019,9 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 30.0 to Attack.JUMP
                 25.0 to Attack.BELLY_FLOP
                 if (health <= maxHealth / 2) {
-                    40.0 to Attack.SLEEP
-                } else {
                     20.0 to Attack.SLEEP
+                } else {
+                    10.0 to Attack.SLEEP
                 }
                 7.0 to Attack.BEAM
             }.next()
@@ -1061,7 +1065,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                     20.0 to Attack.RUN
                     10.0 to Attack.BELLY_FLOP
                     10.0 to Attack.JUMP
-                    10.0 to Attack.SLEEP
+                    5.0 to Attack.SLEEP
                     5.0 to Attack.BEAM
                 }
             }.next()
@@ -1192,7 +1196,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
                 world.getOtherEntities(this@Snorlax, boundingBox.expand(15.0)) { it is ItemEntity && it.stack.isFood }
             isMoving = true
             itemEntity = items.randomOrNull() as? ItemEntity?
-            targetPos = itemEntity?.pos ?: Vec3d.ZERO
+            runTarget = itemEntity
         }
 
         override fun reachedSpot() {
