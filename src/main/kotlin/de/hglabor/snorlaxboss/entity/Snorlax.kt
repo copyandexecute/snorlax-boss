@@ -1299,7 +1299,7 @@ class Snorlax(entityType: EntityType<out PathAwareEntity>, world: World) : PathA
 
         override fun nextTask(): Attack {
             return weightedCollection {
-                80.0 to Attack.RUN
+                60.0 to Attack.RUN
                 18.0 to Attack.CHECK_TARGET
                 2.0 to Attack.SLEEP
             }.next()
